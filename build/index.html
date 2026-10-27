@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build your own Mochi</title>
+<link rel="icon" href="data:,">
+<meta name="description" content="Customise a Mochi: name, coat colours, temperament and starting settings. Save it, export it, or share a link.">
+<style>
+:root{color-scheme:dark;--bg:#0d0a1a;--card:#171230;--line:#5a4b8a;--txt:#e8e4ff;--acc:#14F195;--vi:#9945FF}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line)}
+header h1{font-size:20px;margin:0}header a{color:var(--acc)}.sp{flex:1}
+main{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:18px;padding:18px 20px;max-width:1400px;margin:auto}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 10px;color:#cdb6ff}
+label.f{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:7px 0}
+input[type=text]{background:#0d0a1a;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:60%}
+input[type=color]{width:44px;height:28px;border:1px solid var(--line);border-radius:6px;background:none;padding:0}
+input[type=range]{width:55%}select{max-width:62%;background:#0d0a1a;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:4px}
+.lv{font-size:12px;color:#a99fd6;min-width:70px;text-align:right}
+button,.btn{background:#2a2150;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;font:inherit;text-decoration:none;display:inline-block}
+button:hover,.btn:hover{border-color:var(--acc)}button.primary,.btn.primary{background:var(--vi);border-color:var(--vi)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.fine{font-size:12px;color:#a99fd6}
+#preview{width:100%;aspect-ratio:960/600;border-radius:12px;border:1px solid var(--line);background:#000;display:block}
+#presets button{padding:5px 9px;font-size:12px}#poses button{padding:4px 8px;font-size:12px}
+#share{width:100%;font:12px monospace;background:#0d0a1a;color:var(--acc);border:1px solid var(--line);border-radius:6px;padding:6px}
+#msg{min-height:18px;color:var(--acc);font-size:13px}
+footer{padding:16px 20px 30px;border-top:1px solid var(--line);font-size:12px;color:#a99fd6;max-width:1400px;margin:auto}footer a{color:var(--acc)}
+</style>
+</head>
+<body>
+<header><h1>🎨 Build your own Mochi</h1><span class="sp"></span><a href="../web/">← back to Mochi</a></header>
+<main>
+<div>
+  <div class="card"><h2>Name</h2>
+    <label class="f">Name <input type="text" id="name" maxlength="14" spellcheck="false"></label>
+  </div>
+  <div class="card"><h2>Coat &amp; look</h2>
+    <div id="presets" class="row"></div>
+    <div id="colors"></div>
+  </div>
+  <div class="card"><h2>Temperament</h2>
+    <p class="fine">Gentle nudges to the body, not the brain: how fast needs build up and how quick it moves. The brain was raised on the middle setting, so extremes may make it a little clumsier at first.</p>
+    <div id="traits"></div>
+  </div>
+  <div class="card"><h2>Starting settings</h2>
+    <label class="f">Feeder fills the bowl at dawn <input type="checkbox" id="autoCare"></label>
+    <label class="f">Nights pass faster <input type="checkbox" id="skipNight"></label>
+    <label class="f">Day length <select id="daySeconds"><option value="240">short (4 min)</option><option value="360">normal (6 min)</option><option value="600">long (10 min)</option></select></label>
+    <label class="f">Brain <select id="pack"><option value="">default brain</option></select></label>
+  </div>
+</div>
+<div>
+  <div class="card"><h2>Live preview</h2>
+    <canvas id="preview" width="960" height="600"></canvas>
+    <div id="poses" class="row"></div>
+  </div>
+  <div class="card"><h2>Save &amp; share</h2>
+    <div class="row">
+      <button id="play" class="primary">▶ Play with this Mochi</button>
+      <button id="save">💾 Save in this browser</button>
+      <button id="export">⬇ Export JSON</button>
+      <label class="btn">⬆ Import JSON<input id="import" type="file" accept=".json,application/json" hidden></label>
+      <button id="reset">↺ Reset to classic</button>
+      <button id="forget">🗑 Forget saved design</button>
+    </div>
+    <p class="fine">Share link (opens Mochi with your design; the friend gets a freshly hatched pet):</p>
+    <input id="share" readonly><div class="row"><button id="copy">Copy link</button></div>
+    <div id="msg"></div>
+    <p class="fine">Saving here makes your design the default on this site in this browser. The design changes looks and temperament only; your pet's learned life stays separate (use Export life in Mochi's ⋯ menu for that). Want your own site? Grab the <a style="color:var(--acc)" href="https://github.com/CadenceGinger/mochi-template" target="_blank" rel="noopener">template</a> and drop the exported JSON in as <code>mochi.config.json</code>.</p>
+  </div>
+</div>
+</main>
+<footer>
+Mochi was created by Bernhard Mueller (<a href="https://x.com/muellerberndt" target="_blank" rel="noopener">@muellerberndt</a>) under the MIT licence: <a href="https://github.com/muellerberndt/mochi" target="_blank" rel="noopener">github.com/muellerberndt/mochi</a>. Brain: <a href="https://github.com/muellerberndt/cadence" target="_blank" rel="noopener">Cadence</a>.<br>
+<b>Community-run. Not affiliated with Bernhard Mueller or Pragma Research.</b> The builder is a community addition to the open-source code.
+</footer>
+<script type="module" src="builder.js"></script>
+</body>
+</html>
