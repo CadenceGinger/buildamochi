@@ -3,6 +3,7 @@
 // until the answer arrives, and the world waits at the next decision if the brain is still
 // settling, so no outcome is ever credited to a decision that was not executed.
 
+import { custom, applyCustom } from "./custom.js";
 import { World, DT, TICK_STEPS, ROOM, BODY } from "./world.js";
 import { sense } from "./senses.js";
 import { Arousal } from "./arousal.js";
@@ -23,7 +24,8 @@ const sound = new Sound();
 const brainView = new BrainView();
 const observation = new Float32Array(SPEC.inputs);
 
-let world = new World({ seed: (Date.now() % 100000) + 1, tod: 0.02 });
+applyCustom(custom.cfg);
+let world = new World({ seed: (Date.now() % 100000) + 1, tod: 0.02, daySeconds: custom.cfg.start.daySeconds, autoCare: custom.cfg.start.autoCare });
 let arousal = new Arousal();
 let brain = null;
 let ready = false, inFlight = false, paused = false;
@@ -46,6 +48,7 @@ const page = {
   words: WORDS.map((_, i) => ({ label: ["sit", "spin", "hop", "paw"][i], asked: 0, recent: [], would: null, memory: null })),
   todo: {}, diary: [], decisions: 0, routine: 0, lessons: 0,
 };
+page.name = custom.cfg.name; page.skipNight = custom.cfg.start.skipNight;
 const TODO = [
   ["pet", "Stroke Mochi until it closes its eyes"],
   ["handfed", "Offer a treat from your hand"],
@@ -107,11 +110,13 @@ async function fetchBytes(url) {
 
 async function boot() {
   buildControls();
+  $("name").value = page.name; document.title = page.name;
+  $("autoCare").checked = world.autoCare; $("skipNight").checked = page.skipNight;
   renderTodo();
   try {
     // A life keeps the brain pack it was born from; a new life starts from the default pack.
     const index = await brainIndex();
-    const wanted = new URLSearchParams(location.search).get("pack");
+    const wanted = new URLSearchParams(location.search).get("pack") || (custom.source === "url" && custom.cfg.start.pack) || null;
     let saved = null;
     try { saved = await loadLife(); } catch (error) { console.warn("no saved life", error); }
     if (saved && (saved.version !== VERSION || (wanted && wanted !== saved.pack))) saved = null;
@@ -582,6 +587,7 @@ function restore(saved) {
   world = World.restore(saved.world);
   arousal = Arousal.restore(saved.arousal);
   Object.assign(page, saved.page);
+  if (custom.source === "url") page.name = custom.cfg.name;   // a shared Build-a-Mochi link names the pet
   $("name").value = page.name; document.title = page.name;
   page.words.forEach((word, i) => { const input = document.querySelector(`#word${i} input`); if (input) input.value = word.label; });
   $("autoCare").checked = world.autoCare;
