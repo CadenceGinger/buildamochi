@@ -1,4 +1,4 @@
-import { DEFAULTS, STORAGE_KEY, STEP, clean, encode, loadCustom, applyCustom } from "../web/js/custom.js";
+import { DEFAULTS, STORAGE_KEY, STEP, clean, encode, loadCustom, loadCustomSync, applyCustom } from "../web/js/custom.js?v=2";
 import { World } from "../web/js/world.js";
 import { drawRoom } from "../web/js/render.js";
 
@@ -20,7 +20,7 @@ const PRESETS = {
 };
 const POSES = ["idle", "walk", "sit", "lie", "jump", "spin", "eat", "sleep"];
 
-let cfg = (await loadCustom()).cfg;
+let cfg = loadCustomSync().cfg;
 const world = new World({ seed: 7, tod: 0.3 });
 const view = { time: 0, emotes: [], look: [0, 0], alert: 0, blink: false, showSenses: false, rearrange: false, hideHand: true };
 let pose = "idle";
@@ -86,13 +86,15 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-buildForm();
-try {
-  const index = await (await fetch("../web/brains/index.json")).json();
-  for (const p of index.packs) { const o = document.createElement("option"); o.value = p.id; o.textContent = `${p.name} · Cadence ${p.cadence}`; $("pack").append(o); }
-} catch (e) { console.warn("brain list unavailable", e); }
-fill(); update();
+// No top-level await, so older Safari/iOS can run this module. Draw at once, refine when data arrives.
+buildForm(); fill(); update();
 requestAnimationFrame(frame);
+window.__builderOk = true;
+loadCustom().then(found => { if (found.source === "site") { cfg = found.cfg; fill(); update(); } });
+fetch("../web/brains/index.json").then(r => r.json()).then(index => {
+  for (const p of index.packs) { const o = document.createElement("option"); o.value = p.id; o.textContent = `${p.name} · Cadence ${p.cadence}`; $("pack").append(o); }
+  $("pack").value = cfg.start.pack;
+}).catch(e => console.warn("brain list unavailable", e));
 
 $("save").onclick = () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); say(`Saved. ${cfg.name} is now the default design in this browser.`); };
 $("play").onclick = () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); location.href = shareUrl(); };
