@@ -3,7 +3,7 @@
 // until the answer arrives, and the world waits at the next decision if the brain is still
 // settling, so no outcome is ever credited to a decision that was not executed.
 
-import { custom, applyCustom } from "./custom.js";
+import { custom, customReady, applyCustom } from "./custom.js?v=2";
 import { World, DT, TICK_STEPS, ROOM, BODY } from "./world.js";
 import { sense } from "./senses.js";
 import { Arousal } from "./arousal.js";
@@ -109,6 +109,12 @@ async function fetchBytes(url) {
 }
 
 async function boot() {
+  await customReady;                          // the site's mochi.config.json, when no link or saved design
+  if (custom.source === "site") {
+    applyCustom(custom.cfg);
+    world = new World({ seed: (Date.now() % 100000) + 1, tod: 0.02, daySeconds: custom.cfg.start.daySeconds, autoCare: custom.cfg.start.autoCare });
+    page.name = custom.cfg.name; page.skipNight = custom.cfg.start.skipNight;
+  }
   buildControls();
   $("name").value = page.name; document.title = page.name;
   $("autoCare").checked = world.autoCare; $("skipNight").checked = page.skipNight;

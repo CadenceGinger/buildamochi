@@ -24,7 +24,7 @@ const HEX = /^#[0-9a-fA-F]{6}$/;
 const BASE = { ...BODY };
 
 export function clean(input) {
-  const d = structuredClone(DEFAULTS), c = input && typeof input === "object" ? input : {};
+  const d = JSON.parse(JSON.stringify(DEFAULTS)), c = input && typeof input === "object" ? input : {};
   if (typeof c.name === "string" && c.name.trim()) d.name = c.name.trim().slice(0, 14);
   for (const k of Object.keys(d.coat)) if (c.coat && HEX.test(c.coat[k] || "")) d.coat[k] = c.coat[k];
   for (const k of Object.keys(d.temperament)) {
@@ -57,13 +57,19 @@ async function siteConfig() {
   return null;
 }
 
-export async function loadCustom(search = typeof location !== "undefined" ? location.search : "") {
+// Synchronous part: share link, then a design saved in this browser, else built-in defaults.
+export function loadCustomSync(search = typeof location !== "undefined" ? location.search : "") {
   const param = new URLSearchParams(search).get("mochi");
   if (param) { try { return { cfg: decode(param), source: "url" }; } catch (e) { console.warn("bad ?mochi= config", e); } }
   try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) return { cfg: clean(JSON.parse(raw)), source: "local" }; } catch (e) { /* none */ }
-  const site = await siteConfig();
-  if (site) return { cfg: site, source: "site" };
   return { cfg: clean(null), source: "default" };
+}
+// Full order, adding the site's mochi.config.json before the built-in defaults.
+export async function loadCustom(search) {
+  const found = loadCustomSync(search);
+  if (found.source !== "default") return found;
+  const site = await siteConfig();
+  return site ? { cfg: site, source: "site" } : found;
 }
 
 function blushRGB(hex) { const v = parseInt(hex.slice(1), 16); return `${(v >> 16) & 255},${(v >> 8) & 255},${v & 255}`; }
@@ -82,4 +88,6 @@ export function applyCustom(cfg) {
   return cfg;
 }
 
-export const custom = await loadCustom();
+// No top-level await (older Safari/iOS cannot load such modules): defaults now, site config via ready.
+export const custom = loadCustomSync();
+export const customReady = loadCustom().then(found => Object.assign(custom, found));
