@@ -1,0 +1,29 @@
+{
+  "v": 1,
+  "name": "Mochi",
+  "coat": {
+    "back": "#9945FF",
+    "mid": "#5A8FE0",
+    "brow": "#14F195",
+    "earBack": "#4f9fd6",
+    "earFront": "#22e0a0",
+    "ear": "#c9ffe9",
+    "line": "#0d0a1a",
+    "eye": "#0b0714",
+    "blush": "#dc1fff",
+    "mouth": "#2a0f4a"
+  },
+  "temperament": {
+    "appetite": 0,
+    "energy": 0,
+    "playful": 0,
+    "cuddly": 0,
+    "pace": 0
+  },
+  "start": {
+    "autoCare": true,
+    "skipNight": true,
+    "daySeconds": 360,
+    "pack": ""
+  }
+}
