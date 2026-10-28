@@ -1,7 +1,7 @@
 // Drawing only. Everything here reads the world and the last answer of the brain; nothing here
 // decides what Mochi does. Poses follow the action the brain chose, faces follow measured needs.
 
-import { BODY, ROOM, FLAVORS, DOOR } from "./world.js?v=8";
+import { BODY, ROOM, FLAVORS, DOOR } from "./world.js?v=9";
 
 const TAU = Math.PI * 2;
 const hsl = (h, s, l, a = 1) => `hsla(${h},${s}%,${l}%,${a})`;
@@ -104,40 +104,47 @@ function drawRest(ctx, world, view) {
   drawEmotes(ctx, world, view);
 }
 
-// The garden: same size and the same landmark kinds and hues as indoors (a purple blanket to
-// sleep on, an orange bowl, a blue pond, a green hedge den), so the brain's senses read it alike.
+// The garden: its own layout. No bowl or bed (those live only at home), a small water dish: a hedge den
+// where toys turn up, chartreuse plant beds, a teal-leaved tree and a wide sun lawn.
 function drawGarden(ctx, world, view) {
   const { w, h, wall } = ROOM, light = world.light();
-  ctx.fillStyle = "#9fd286"; ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = "rgba(60,120,50,0.18)";
-  for (let i = 0; i < 160; i++) { const x = (i * 197) % w, y = (i * 331) % h; ctx.fillRect(x, y, 2, 7); }
-  ctx.fillStyle = "rgba(255,255,255,0.75)";                       // decorative daisies, not sensed
-  for (const [x, y] of [[420, 120], [560, 470], [700, 260], [300, 380], [610, 150], [470, 330]]) { ctx.beginPath(); ctx.arc(x, y, 3, 0, TAU); ctx.fill(); }
-  ctx.fillStyle = "#c9a36b"; ctx.globalAlpha = 0.55;                // a path from the door
-  roundRect(ctx, 0, DOOR.y - 40, 300, 80, 30); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.fillStyle = "#8fc77a"; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(60,120,50,0.16)";
+  for (let i = 0; i < 200; i++) { const x = (i * 197) % w, y = (i * 331) % h; ctx.fillRect(x, y, 2, 7); }
+  ctx.fillStyle = "#c9a36b"; ctx.globalAlpha = 0.6;                 // a stepping-stone path from the door
+  for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.ellipse(40 + i * 44, DOOR.y + Math.sin(i * 0.9) * 12, 17, 11, 0, 0, TAU); ctx.fill(); }
+  ctx.globalAlpha = 1;
   ctx.fillStyle = "#5c9a4a";                                        // fence-hedge walls
   ctx.fillRect(0, 0, w, wall); ctx.fillRect(0, h - wall, w, wall); ctx.fillRect(0, 0, wall, h); ctx.fillRect(w - wall, 0, wall, h);
   ctx.fillStyle = "#ecd6b4"; ctx.fillRect(0, DOOR.y - DOOR.half, wall, DOOR.half * 2);   // the doorway back in
   ctx.fillStyle = "#8b6747"; ctx.fillRect(0, DOOR.y - DOOR.half - 6, wall + 3, 6); ctx.fillRect(0, DOOR.y + DOOR.half, wall + 3, 6);
   const sun = world.sun();
   if (light > 0.02) {
-    const glow = ctx.createRadialGradient(sun.x, sun.y, 4, sun.x, sun.y, sun.rx * 1.25);
-    glow.addColorStop(0, `rgba(255,236,150,${0.6 * light})`); glow.addColorStop(1, "rgba(255,236,150,0)");
+    const glow = ctx.createRadialGradient(sun.x, sun.y, 4, sun.x, sun.y, sun.rx * 1.2);
+    glow.addColorStop(0, `rgba(255,236,140,${0.7 * light})`); glow.addColorStop(1, "rgba(255,236,140,0)");
     ctx.save(); ctx.translate(sun.x, sun.y); ctx.scale(1, sun.ry / sun.rx); ctx.translate(-sun.x, -sun.y);
-    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sun.x, sun.y, sun.rx * 1.25, 0, TAU); ctx.fill(); ctx.restore();
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sun.x, sun.y, sun.rx * 1.2, 0, TAU); ctx.fill(); ctx.restore();
   }
   const f = world.furniture;
-  roundRect(ctx, f.bed.x - f.bed.r, f.bed.y - f.bed.r * 0.8, f.bed.r * 2, f.bed.r * 1.6, 10); ctx.fillStyle = "#8c6cc0"; ctx.fill();
-  ctx.strokeStyle = "#cdb6ee"; ctx.lineWidth = 3; ctx.setLineDash([8, 8]); ctx.stroke(); ctx.setLineDash([]);
-  ellipse(ctx, f.bowl.x, f.bowl.y + 3, f.bowl.r, f.bowl.r * 0.8, "#d9792b");
-  ellipse(ctx, f.bowl.x, f.bowl.y, f.bowl.r - 6, f.bowl.r * 0.8 - 5, "#f6e3c8");
-  ctx.fillStyle = "#9a5b2c";
-  for (let i = 0; i < Math.round(f.bowl.food * 5); i++) { const a = i * 2.4, r = 3 + (i % 5) * 3.1; ctx.beginPath(); ctx.arc(f.bowl.x + Math.cos(a) * r, f.bowl.y + Math.sin(a) * r * 0.75, 2.6, 0, TAU); ctx.fill(); }
-  const level = Math.max(0, Math.min(1, f.water.level / 4));
-  ellipse(ctx, f.water.x, f.water.y, f.water.r + 10, (f.water.r + 10) * 0.7, "#6f9f5a");
-  ellipse(ctx, f.water.x, f.water.y, (f.water.r + 4) * (0.5 + 0.5 * level), (f.water.r + 4) * 0.7 * (0.5 + 0.5 * level), "#3f7fd0");
-  for (const [dx, dy, r] of [[-14, -6, 22], [12, -10, 24], [0, 10, 26], [-20, 12, 18], [22, 10, 18]]) ellipse(ctx, f.box.x + dx, f.box.y + dy, r, r * 0.85, "#4f9d63");
-  ctx.fillStyle = "#ffe07a"; ctx.font = "16px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("★", f.box.x, f.box.y);
+  const bed = (p, n) => { if (!p) return;                            // chartreuse plant bed (hue 95)
+    ellipse(ctx, p.x, p.y, p.r + 6, (p.r + 6) * 0.7, "#7a5a3c");
+    for (let i = 0; i < n; i++) { const a = i * 2.39, r = (i % 4) * p.r * 0.22; ellipse(ctx, p.x + Math.cos(a) * r, p.y + Math.sin(a) * r * 0.65, 11, 8, "hsl(95,62%,48%)", "hsl(95,55%,32%)", 1); }
+  };
+  bed(f.plants, 12); bed(f.ferns, 9);
+  if (f.tree) {                                                       // teal-leaved tree (hue 165)
+    ellipse(ctx, f.tree.x + 8, f.tree.y + f.tree.r * 0.7, f.tree.r * 0.9, f.tree.r * 0.3, "rgba(30,60,40,0.25)");
+    for (const [dx, dy, r] of [[-18, -8, 30], [16, -14, 32], [0, 12, 34], [-24, 16, 22], [26, 14, 24]]) ellipse(ctx, f.tree.x + dx, f.tree.y + dy, r, r * 0.9, "hsl(165,48%,40%)", "hsl(165,45%,28%)", 1);
+  }
+  if (f.water) {                                                      // the garden's small water dish
+    const wd = f.water, lv = Math.max(0, Math.min(1, wd.level / 4));
+    ellipse(ctx, wd.x, wd.y + 3, wd.r, wd.r * 0.8, "#3f7fd0");
+    ellipse(ctx, wd.x, wd.y, wd.r - 5, wd.r * 0.8 - 4, "#e8f3ff");
+    if (lv > 0.01) ellipse(ctx, wd.x, wd.y, (wd.r - 6) * (0.45 + 0.55 * lv), (wd.r * 0.8 - 5) * (0.45 + 0.55 * lv), "rgba(110,180,255,0.85)");
+  }
+  if (f.den) {                                                        // the hedge den where toys turn up (green, toy-box hue)
+    for (const [dx, dy, r] of [[-14, -6, 22], [12, -10, 24], [0, 10, 26], [-20, 12, 18], [22, 10, 18]]) ellipse(ctx, f.den.x + dx, f.den.y + dy, r, r * 0.85, "#4f9d63");
+    ctx.fillStyle = "#ffe07a"; ctx.font = "16px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("★", f.den.x, f.den.y);
+  }
   drawRest(ctx, world, view);
 }
 

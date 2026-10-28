@@ -1,11 +1,12 @@
 // The plaza (community addition, buildamochi.com): Mochis from other browsers visit your room.
 // Peer-to-peer over WebRTC (Trystero, nostr relays for signalling); no server, no accounts.
 // Every pet is driven by its own owner's local Cadence brain; peers exchange only a small state
-// record (~8 Hz). Visitors are drawn only: they are NOT fed into this brain's senses, because the
-// brain was never raised with other creatures (see PLAZA notes in the report / README).
+// record (~8 Hz). By default visitors are drawn only. If this owner opts in ("Mochi notices
+// visitors"), visitors in the same room reach the brain as capped motion only (see senses.js);
+// that setting and its marker hue live on this side and are never sent or accepted from peers.
 import { joinRoom, selfId } from "./vendor/trystero-nostr-0.26.0.mjs";
-import { COAT, drawMochi, drawLaser } from "./render.js?v=8";
-import { clean } from "./custom.js?v=3";
+import { COAT, drawMochi, drawLaser } from "./render.js?v=9";
+import { clean } from "./custom.js?v=4";
 
 export const ROOM_ID = "buildamochi-plaza";
 const APP_ID = "buildamochi.com/plaza/v1";
@@ -109,16 +110,27 @@ export class Plaza {
     this.sendEmoteRaw({ e: key }); if (this.bc) this.bc.postMessage({ k: "em", id: selfId, d: { e: key } });
     return EMOTES[key];
   }
+  // Visitors in `room` as plain moving points for the motion sense: position and velocity only.
+  visitorsIn(room) {
+    const now = performance.now(), out = [];
+    for (const peer of this.peers.values()) {
+      const s = peer.state;
+      if (!s || s.room !== room || now - peer.seen > STALE_MS) continue;
+      out.push({ x: peer.shown.x, y: peer.shown.y, vx: s.vx, vy: s.vy });
+    }
+    return out;
+  }
   names() { return [...this.peers.values()].filter(p => p.state).map(p => p.state.name); }
 
   // Draws every visitor into the room; call after drawRoom.
-  draw(ctx, view, room = "home") {
+  draw(ctx, view, room = "home", ringHue = null) {
     const now = performance.now();
     for (const peer of this.peers.values()) {
       const s = peer.state; if (!s) continue;
       if (s.room !== room) { peer.shown.x = s.x; peer.shown.y = s.y; continue; }   // only visitors in the same room
       peer.shown.x += (s.x - peer.shown.x) * 0.25; peer.shown.y += (s.y - peer.shown.y) * 0.25;
       const m = { ...s, x: peer.shown.x, y: peer.shown.y, needs: { hunger: 0, thirst: 0, fatigue: 0, boredom: 0, lonely: 0 }, touch: { stroke: 0, boop: 0 }, taste: { good: 0, bad: 0 } };
+      if (ringHue !== null) { ctx.save(); ctx.strokeStyle = `hsla(${ringHue},70%,62%,.85)`; ctx.lineWidth = 3; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.ellipse(m.x, m.y + 8, 40, 30, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
       if (s.laser) { ctx.save(); ctx.globalAlpha = 0.6; drawLaser(ctx, s.laser, view.time); ctx.restore(); }
       ctx.save(); ctx.globalAlpha = 0.92;
       withCoat(s.coat, () => drawMochi(ctx, { m, hand: { present: false } }, { ...view, emotes: [], look: [Math.cos(s.heading), Math.sin(s.heading)], alert: 0, blink: false }));

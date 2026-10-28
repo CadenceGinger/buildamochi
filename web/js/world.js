@@ -47,9 +47,22 @@ export const FURNITURE = {
   water: { x: 830, y: 480, r: 24, hue: 215 },
   box: { x: 130, y: 480, r: 40, hue: 130 },
 };
+// The garden has its own layout. Food, water and the bed exist only at home; the garden has a
+// hedge den of toys (green, the toy-box hue), a big open sun lawn, and two landmarks of its own
+// built from hue blends no home object uses: chartreuse plant beds (between yellow and green)
+// and a teal-leaved tree (between green and blue, mostly green). Bowl orange, water blue, bed
+// purple and toy red/magenta never appear in the garden's furniture.
+export const GARDEN = {
+  den: { x: 760, y: 150, r: 44, hue: 130 },
+  plants: { x: 470, y: 470, r: 46, hue: 95 },
+  ferns: { x: 300, y: 130, r: 36, hue: 95 },
+  tree: { x: 800, y: 430, r: 52, hue: 165 },
+  water: { x: 140, y: 560 - 40, r: 22, hue: 215 },   // a small dish by the door: drinks only, no food
+};
+export const GARDEN_SUN = { from: [360, 260], to: [600, 320], rx: 110, ry: 74 };
+export const gardenFurniture = () => { const g = JSON.parse(JSON.stringify(GARDEN)); g.water.level = WATER_UNITS; return g; };
 // A doorway: the gap in the home's east wall opens onto the garden's west wall. Both rooms share
-// ROOM's size and the same landmark kinds and hues, each in its own coordinate frame, so the
-// brain's place cells, wall touch and hue meanings mean the same thing in either room.
+// ROOM's size and each has its own coordinate frame.
 export const DOOR = { y: 460, half: 75 };
 export const ROOMS = ["home", "garden"];
 export const BOWL_PORTIONS = 3;
@@ -84,9 +97,9 @@ export class World {
     this.toys = [];
     this.foods = [];
     this.room = "home";
-    this.away = { furniture: JSON.parse(JSON.stringify(FURNITURE)), toys: [], foods: [] };
-    this.away.furniture.bowl.food = BOWL_PORTIONS; this.away.furniture.water.level = WATER_UNITS;
+    this.away = { furniture: gardenFurniture(), toys: [], foods: [] };
     this.doorCd = 0;
+    this.stockGarden();
     this.hand = { present: false, x: 480, y: 300, petting: false, holding: null };
     this.sounds = {};
     this.events = [];
@@ -125,6 +138,10 @@ export class World {
   sun() {
     const tod = this.tod(), light = this.light(tod);
     const f = clamp01((tod - 0.04) / 0.66);
+    if (this.room === "garden") {
+      const g = GARDEN_SUN;
+      return { on: light > 0.5, x: g.from[0] + (g.to[0] - g.from[0]) * f, y: g.from[1] + (g.to[1] - g.from[1]) * f, rx: g.rx, ry: g.ry };
+    }
     return {
       on: light > 0.5,
       x: SUN.from[0] + (SUN.to[0] - SUN.from[0]) * f,
@@ -137,7 +154,20 @@ export class World {
     const dx = (this.m.x - sun.x) / sun.rx, dy = (this.m.y - sun.y) / sun.ry;
     return dx * dx + dy * dy < 1;
   }
-  onBed() { return dist(this.m, this.furniture.bed) < this.furniture.bed.r; }
+  onBed() { const bed = this.furniture.bed; return !!bed && dist(this.m, bed) < bed.r; }
+  // Each morning a ball and a mouse turn up by the garden's hedge den if the garden has none:
+  // things to discover out there. Nothing moves Mochi; it only finds them if it goes.
+  stockGarden() {
+    const store = this.room === "garden" ? this : this.away, den = store.furniture.den;
+    if (!den || store.toys.some(t => t.kind !== "wand")) return;
+    for (const [kind, dx, dy] of [["ball", -90, 60], ["mouse", -40, 110]]) {
+      const b = TOY_KINDS[kind];
+      store.toys.push({ id: this.nextId++, kind, x: den.x + dx, y: den.y + dy, vx: 0, vy: 0, r: b.r, drag: b.drag, bounce: b.bounce,
+        hue: b.hue, sat: b.sat, charge: 0, heading: 0, squeakT: 0, contactCd: 0, inHand: false, seen: 0 });
+    }
+  }
+  // Home's furniture, wherever Mochi is: the bowl and water dish live only there.
+  homeFurniture() { return this.room === "home" ? this.furniture : this.away.furniture; }
 
   // ---------------------------------------------------------------- the body's interface
   setAction(action) {
@@ -202,8 +232,8 @@ export class World {
     this.m.held = false;
     this.events.push({ type: "set down" });
   }
-  fillBowl() { this.furniture.bowl.food = BOWL_PORTIONS; this.sound("rattle"); this.events.push({ type: "bowl filled" }); }
-  fillWater() { this.furniture.water.level = WATER_UNITS; this.events.push({ type: "water filled" }); }
+  fillBowl() { this.homeFurniture().bowl.food = BOWL_PORTIONS; this.sound("rattle"); this.events.push({ type: "bowl filled" }); }
+  fillWater() { for (const f of [this.furniture, this.away.furniture]) if (f.water) f.water.level = WATER_UNITS; this.events.push({ type: "water filled" }); }
   dropTreat(x, y, flavor = "cookie") {
     const lo = ROOM.wall + 8;
     const food = { id: this.nextId++, x: clamp(x, lo, ROOM.w - lo), y: clamp(y, lo, ROOM.h - lo), r: 9, flavor, seen: 0 };
@@ -268,7 +298,7 @@ export class World {
   foodSources() {
     const out = [];
     const bowl = this.furniture.bowl;
-    if (bowl.food > 1e-6) out.push({ type: "bowl", x: bowl.x, y: bowl.y, r: bowl.r, taste: "savoury", strength: 1 });
+    if (bowl && bowl.food > 1e-6) out.push({ type: "bowl", x: bowl.x, y: bowl.y, r: bowl.r, taste: "savoury", strength: 1 });
     for (const food of this.foods) {
       out.push({ type: "treat", x: food.x, y: food.y, r: food.r, taste: FLAVORS[food.flavor].taste, strength: 0.8, food });
     }
@@ -289,8 +319,8 @@ export class World {
     }
     if (best) return best;
     const bowl = this.furniture.bowl, water = this.furniture.water;
-    const atBowl = bowl.food > 1e-6 && reach(bowl);
-    const atWater = water.level > 1e-6 && reach(water);
+    const atBowl = !!bowl && bowl.food > 1e-6 && reach(bowl);
+    const atWater = !!water && water.level > 1e-6 && reach(water);
     if (atBowl && atWater) return m.needs.hunger >= m.needs.thirst ? { type: "bowl" } : { type: "water" };
     if (atBowl) return { type: "bowl" };
     if (atWater) return { type: "water" };
@@ -306,7 +336,8 @@ export class World {
     if (tod < before) {                       // dawn
       this.day += 1;
       this.events.push({ type: "dawn", day: this.day });
-      if (this.autoCare) { for (const f of [this.furniture, this.away.furniture]) { f.bowl.food = BOWL_PORTIONS; f.water.level = WATER_UNITS; } this.sound("rattle", 0.7); }
+      if (this.autoCare) { const f = this.homeFurniture(); f.bowl.food = BOWL_PORTIONS; this.fillWater(); this.sound("rattle", 0.7); }
+      this.stockGarden();
     }
 
     // needs rise on their own clocks
@@ -594,6 +625,12 @@ export class World {
       world[key] = copy[key];
     }
     if (copy.room && copy.away) { world.room = copy.room; world.away = copy.away; for (const t of world.away.toys) t.inHand = false; }
+    // older saves had a copy of home in the garden: give it the garden's own layout (its toys stay)
+    const gardenStore = world.room === "garden" ? world : world.away;
+    if (gardenStore.furniture.bowl || gardenStore.furniture.bed || !gardenStore.furniture.den) {
+      gardenStore.furniture = gardenFurniture(); gardenStore.foods = [];
+    }
+    if (!gardenStore.furniture.water) gardenStore.furniture.water = gardenFurniture().water;   // saves from before the garden dish
     for (const toy of world.toys) toy.inHand = false;
     world.m.held = false;
     return world;

@@ -2,7 +2,7 @@
 // feather, forgets the bowl now and then, and sometimes makes a noise. The bootstrap uses it so
 // a young Mochi meets the situations a player will create. Called once per decision tick.
 
-import { ROOM } from "./world.js?v=8";
+import { ROOM } from "./world.js?v=9";
 import { WORDS } from "./spec.js";
 
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
@@ -35,7 +35,7 @@ export class Owner {
 
   setup(world) {
     world.autoCare = false;
-    const box = world.furniture.box;
+    const box = world.furniture.box || world.furniture.den;
     world.spawnToy("ball", box.x + this.uniform(40, 160), box.y - this.uniform(20, 120));
     if (this.random() < 0.5) world.spawnToy("mouse", box.x + this.uniform(30, 120), box.y - this.uniform(0, 80));
     world.events.length = 0;
@@ -48,7 +48,8 @@ export class Owner {
       this.day = world.day;
       this.refillAt = this.ticks + (this.random() < 0.85 ? 0 : this.integer(200, 600));
     }
-    const bowl = world.furniture.bowl, water = world.furniture.water;
+    const home = world.homeFurniture ? world.homeFurniture() : world.furniture;
+    const bowl = home.bowl, water = home.water;
     this.emptyTicks = bowl.food < 0.05 || water.level < 0.05 ? this.emptyTicks + 1 : 0;
     if (this.refillAt === null && this.emptyTicks === 1) this.refillAt = this.ticks + this.integer(120, 420);
     if (this.refillAt !== null && this.ticks >= this.refillAt) {
@@ -127,7 +128,7 @@ export class Owner {
     }
     if (roll < 0.95) {                         // the wind-up mouse
       let mouse = world.toys.find(toy => toy.kind === "mouse");
-      if (!mouse) mouse = world.spawnToy("mouse", world.furniture.box.x + 60, world.furniture.box.y - 40);
+      if (!mouse) mouse = world.spawnToy("mouse", (world.furniture.box || world.furniture.den).x + 60, (world.furniture.box || world.furniture.den).y - 40);
       world.moveHand(mouse.x, mouse.y, true);
       world.windMouse(mouse.id);
       return { left: 5, update: () => true };

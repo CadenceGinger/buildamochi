@@ -3,7 +3,7 @@
 // teacher goal or lesson answer is a sense: sight carries hue, bearing and range; smell carries
 // odour bearing and quality; hearing carries a cochlear pattern.
 
-import { BODY, DIRS, ROOM, FLAVORS, DOOR } from "./world.js?v=8";
+import { BODY, DIRS, ROOM, FLAVORS, DOOR } from "./world.js?v=9";
 import {
   BEARINGS, HUES, HUE_WIDTH, INPUTS, NEEDS, NEED_LEVELS, OFFSETS, PLACE_GRID, SOUNDS,
 } from "./spec.js";
@@ -32,6 +32,9 @@ function hueWeights(hue, out) {
     out[h] = Math.max(0, 1 - gap / HUE_WIDTH);
   }
 }
+
+// Plaza visitors: at most this much motion per bearing cell, from at most this many visitors.
+export const VISITOR_CAP = 0.35, VISITOR_MAX = 8;
 
 const bearing = new Float32Array(BEARINGS);
 const hues = new Float32Array(HUES.length);
@@ -77,6 +80,20 @@ export function sense(world, out = new Float32Array(INPUTS)) {
       if (d > BODY.view) continue;
       for (let b = 0; b < BEARINGS; b++) add(motion + b, bearing[b] * Math.min(1, speed / 200));
     }
+    // Plaza visitors (opt-in by this owner; the page sets world.visitors only then, and only for
+    // visitors in the same room). Motion only: no hue, no touch, no reward, no company, and the
+    // total they can add to any motion cell is capped.
+    if (world.visitors && world.visitors.length) {
+      const extra = new Float32Array(BEARINGS);
+      for (const v of world.visitors.slice(0, VISITOR_MAX)) {
+        const speed = Math.hypot(v.vx, v.vy);
+        if (!(speed >= 25)) continue;
+        const d = bearings(v.x - m.x, v.y - m.y, bearing);
+        if (d > BODY.view) continue;
+        for (let b = 0; b < BEARINGS; b++) extra[b] += bearing[b] * Math.min(1, speed / 200) * VISITOR_CAP;
+      }
+      for (let b = 0; b < BEARINGS; b++) add(motion + b, Math.min(VISITOR_CAP, extra[b]));
+    }
 
     const hand = world.hand;
     if (hand.present) {
@@ -100,7 +117,7 @@ export function sense(world, out = new Float32Array(INPUTS)) {
     const drift = [];
     if (world.away) {
       const bowl = world.away.furniture.bowl;
-      if (bowl.food > 1e-6) drift.push({ x: doorX, y: DOOR.y, taste: "savoury", strength: 0.5 });
+      if (bowl && bowl.food > 1e-6) drift.push({ x: doorX, y: DOOR.y, taste: "savoury", strength: 0.5 });
       for (const food of world.away.foods) drift.push({ x: doorX, y: DOOR.y, taste: FLAVORS[food.flavor].taste, strength: 0.4 });
     }
     for (const source of world.foodSources().concat(drift)) {
@@ -117,7 +134,7 @@ export function sense(world, out = new Float32Array(INPUTS)) {
     const reach = source => Math.hypot(source.x - m.x, source.y - m.y) < BODY.radius + source.r + 10;
     if (world.foodSources().some(reach)) out[at] = 1;
     const water = world.furniture.water;
-    if (water.level > 1e-6 && reach(water)) out[at + 1] = 1;
+    if (water && water.level > 1e-6 && reach(water)) out[at + 1] = 1;
     out[at + 2] = m.taste.good;
     out[at + 3] = m.taste.bad;
   }

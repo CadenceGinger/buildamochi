@@ -3,16 +3,16 @@
 // until the answer arrives, and the world waits at the next decision if the brain is still
 // settling, so no outcome is ever credited to a decision that was not executed.
 
-import { custom, customReady, applyCustom } from "./custom.js?v=3";
-import { World, DT, TICK_STEPS, ROOM, BODY } from "./world.js?v=8";
-import { sense } from "./senses.js?v=8";
+import { custom, customReady, applyCustom } from "./custom.js?v=4";
+import { World, DT, TICK_STEPS, ROOM, BODY } from "./world.js?v=9";
+import { sense } from "./senses.js?v=10";
 import { Arousal } from "./arousal.js";
 import { A, ACTIONS, HEARING, OFFSETS, SOUNDS, SPEC, TRICKS, WORDS } from "./spec.js";
-import { drawRoom } from "./render.js?v=8";
+import { drawRoom } from "./render.js?v=9";
 import { BrainLink, brainIndex } from "./brainlink.js";
 import { BrainView, actionName } from "./brainview.js";
 import { Sound } from "./audio.js";
-import { saveLife, loadLife, forgetLife, lifeToBlob, blobToLife } from "./storage.js";
+import { saveLife, loadLife, forgetLife, lifeToBlob, blobToLife, savePlazaBackup, loadPlazaBackup } from "./storage.js?v=2";
 
 const $ = id => document.getElementById(id);
 const canvas = $("room"), ctx = canvas.getContext("2d");
@@ -189,7 +189,9 @@ async function decide() {
   const m = world.m;
   const wake = arousal.update(outcome, world.novelty(), m.needs) || ticks < YOUTH_TICKS;
   const showing = show !== null ? show : null;
+  world.visitors = plazaVisitors();
   sense(world, observation);
+  world.visitors = null;
   // The brain view shows the settling steps that really ran. Recording them costs time, so a
   // slow machine records fewer decisions (always the ones that learn) and shows the settled
   // state of the others.
@@ -479,8 +481,8 @@ canvas.addEventListener("pointerdown", event => {
   if (tool === "carry") { if (world.pickUp()) { drag = { kind: "carry" }; emote("!"); } return; }
   const toy = world.toys.find(item => item.kind !== "wand" && near(item, p, 10));
   if (toy) { world.grabToy(toy.id); drag = { kind: "toy", id: toy.id }; return; }
-  if (near(world.furniture.bowl, p, 2)) { world.fillBowl(); sound.rattle(); diary("you filled the bowl", "fill"); return; }
-  if (near(world.furniture.water, p, 2)) { world.fillWater(); sound.lap(); diary("you filled the water", "water"); return; }
+  if (world.furniture.bowl && near(world.furniture.bowl, p, 2)) { world.fillBowl(); sound.rattle(); diary("you filled the bowl", "fill"); return; }
+  if (world.furniture.water && near(world.furniture.water, p, 2)) { world.fillWater(); sound.lap(); diary("you filled the water", "water"); return; }
   if (world.handOver()) { drag = { kind: "pet" }; world.setPetting(true); }
 });
 
@@ -665,7 +667,7 @@ function frame(now) {
   const d = Math.max(1, Math.hypot(target.x - m.x, target.y - m.y));
   view.look = [(target.x - m.x) / d, (target.y - m.y) / d];
   drawRoom(ctx, world, view);
-  if (plaza) { try { plaza.draw(ctx, view, world.room); } catch (error) { console.warn("plaza draw", error); } }
+  if (plaza) { try { plaza.draw(ctx, view, world.room, visitorPrefs.on ? visitorPrefs.hue : null); } catch (error) { console.warn("plaza draw", error); } }
   if (frames++ % 12 === 0) renderNeeds();
   brainView.frame(now);
   requestAnimationFrame(frame);
@@ -695,10 +697,41 @@ function plazaUi() {
     $("plazaCount").title = ["you", ...names].join(", ");   // textContent/title: names never become HTML
   }
 }
-async function togglePlaza(force) {
-  if (plaza && plaza.room && force !== true) { plaza.leave(); toast("Left the plaza"); return; }
+// Opt-in "let Mochi notice visitors": this owner's setting only, never sent to or set by peers.
+// Visitors then reach the brain only as capped motion (senses.js); no hue, touch, reward or company.
+const VISITOR_HUES = { 240: "indigo", 250: "deep indigo", 260: "blue-violet" };
+const visitorPrefs = (() => {
+  let p = {}; try { p = JSON.parse(localStorage.getItem("mochi-visitor-sense") || "{}"); } catch (e) { p = {}; }
+  return { on: p.on === true, hue: Object.hasOwn(VISITOR_HUES, p.hue) ? Number(p.hue) : 250 };
+})();
+const storeVisitorPrefs = () => { try { localStorage.setItem("mochi-visitor-sense", JSON.stringify(visitorPrefs)); } catch (e) { /* private mode */ } };
+function plazaVisitors() {
+  if (!visitorPrefs.on || !plaza || !plaza.room) return null;
+  return plaza.visitorsIn(world.room);
+}
+async function leavePlaza() {
+  plaza.leave();
+  if (!plazaVisit) { toast("Left the plaza"); return; }
+  plazaVisit = false;
+  const keep = window.confirm(`Keep what ${page.name} learned during this plaza visit?\n\nOK: keep it. Cancel: go back to the copy saved just before the visit.`);
+  if (keep) { save(false); toast("Left the plaza, plaza time kept"); return; }
+  await restorePlazaBackup(true);
+}
+async function restorePlazaBackup(quiet) {
   try {
-    if (!plaza) { const { Plaza } = await import("./plaza.js?v=8"); plaza = new Plaza({ getState: plazaState, onChange: plazaUi }); }
+    const saved = await loadPlazaBackup();
+    if (!saved) { toast("No pre-plaza backup yet"); return; }
+    if (!quiet && !window.confirm(`Go back to the copy of ${page.name} saved before the last plaza visit (${new Date(saved.at).toLocaleString()})?`)) return;
+    await adopt(saved); await saveLife(saved);
+    toast("Back to the copy from before the plaza visit");
+  } catch (error) { console.error(error); toast("Could not restore the backup"); }
+}
+let plazaVisit = false;
+async function togglePlaza(force) {
+  if (plaza && plaza.room && force !== true) { await leavePlaza(); return; }
+  try {
+    if (ready) { await savePlazaBackup(await snapshot()); plazaVisit = true; }
+    if (!plaza) { const { Plaza } = await import("./plaza.js?v=10"); plaza = new Plaza({ getState: plazaState, onChange: plazaUi }); }
     plaza.join(); toast(`${page.name} walked into the plaza. Other Mochis appear as they connect.`);
   } catch (error) { console.warn("plaza unavailable", error); toast("The plaza could not connect from this browser."); }
 }
@@ -713,7 +746,15 @@ function setupPlaza() {
     b.onclick = () => { const text = plaza && plaza.emote(key); if (text) emote(text, { color: "#ffffff" }); };
     bar.append(b);
   }
+  const sense = document.createElement("label"); sense.title = "Off by default. When on, your Mochi's brain sees visitors in the same room as movement only (no reward, touch or company). Only you can change this.";
+  const box = document.createElement("input"); box.type = "checkbox"; box.id = "visitorSense"; box.checked = visitorPrefs.on;
+  box.onchange = () => { visitorPrefs.on = box.checked; storeVisitorPrefs(); toast(box.checked ? `${page.name} can now notice visitors moving (as motion only)` : "Visitors are drawn only again"); };
+  const hue = document.createElement("select"); hue.id = "visitorHue"; hue.title = "Marker colour for visitors your Mochi can notice (your side only)";
+  for (const [value, name] of Object.entries(VISITOR_HUES)) { const o = document.createElement("option"); o.value = value; o.textContent = name; o.selected = Number(value) === visitorPrefs.hue; hue.append(o); }
+  hue.onchange = () => { visitorPrefs.hue = Number(hue.value); storeVisitorPrefs(); };
+  sense.append(box, " notices visitors ", hue); bar.append(sense);
   $("stage").append(bar); plazaUi();
+  const restoreBtn = document.getElementById("plazaRestore"); if (restoreBtn) restoreBtn.onclick = () => restorePlazaBackup(false);
   if (new URLSearchParams(location.search).get("plaza") === "1") togglePlaza(true);
 }
 setupPlaza();

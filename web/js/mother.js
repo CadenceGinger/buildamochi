@@ -5,7 +5,7 @@
 // view), so the routine she shows is one a brain with those senses can hold.
 
 import { A } from "./spec.js";
-import { BODY, DIRS } from "./world.js?v=8";
+import { BODY, DIRS } from "./world.js?v=9";
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -50,20 +50,20 @@ export class Mother {
     const nearest = list => list.reduce((best, item) => (!best || dist(item, m) < dist(best, m) ? item : best), null);
     const food = nearest(sources);
     const treat = nearest(sources.filter(s => s.type !== "bowl" && s.taste !== "bitter" && inView(s)));
-    const water = f.water.level > 1e-6 ? f.water : null;
+    const water = f.water && f.water.level > 1e-6 ? f.water : null;
     const urgent = n.hunger > 0.95 || n.thirst > 0.95;
     const quiet = (world.sounds.meow || 0) < 0.12;       // its last call has faded: time for another
 
     // sleep: through the night, and a nap when worn out
     if ((m.asleep || m.pose === "lie") && (night || n.fatigue > 0.12) && !urgent) return set("sleep", A.sleep);
-    if ((night || n.fatigue > 0.8) && !urgent) return set("sleep", this.go(m, f.bed, 18, A.sleep));
+    if ((night || n.fatigue > 0.8) && !urgent) return set("sleep", f.bed ? this.go(m, f.bed, 18, A.sleep) : A.sleep);
 
     // hunger and thirst
     const eating = food && mouthReach(food) && n.hunger > 0.12;
     if (n.hunger > 0.5 || eating) {
       if (food) return set("eat", this.go(m, food, BODY.radius + food.r, A.eat));
       if (n.hunger > 0.6) {                    // an empty bowl: wait at it and ask
-        if (dist(m, f.bowl) > 40) return set("beg", moveToward(m, f.bowl.x, f.bowl.y));
+        if (f.bowl && dist(m, f.bowl) > 40) return set("beg", moveToward(m, f.bowl.x, f.bowl.y));
         const handSeen = world.hand.present && inView(world.hand);
         return set("beg", handSeen ? A.sit : (quiet ? A.call : A.rest));
       }
@@ -72,7 +72,7 @@ export class Mother {
     if (n.thirst > 0.5 || drinking) {
       if (water) return set("drink", this.go(m, water, BODY.radius + water.r, A.eat));
       if (n.thirst > 0.6) {
-        if (dist(m, f.water) > 40) return set("beg", moveToward(m, f.water.x, f.water.y));
+        if (f.water && dist(m, f.water) > 40) return set("beg", moveToward(m, f.water.x, f.water.y));
         return set("beg", quiet ? A.call : A.rest);
       }
     }
@@ -93,7 +93,7 @@ export class Mother {
     const toy = nearest(toys);
     if (n.boredom > 0.5 || (toy && n.boredom > 0.15 && dist(m, toy) < BODY.near)) {
       if (toy) return set("play", dist(m, toy) < BODY.reach - 6 ? A.pounce : moveToward(m, toy.x, toy.y));
-      if (dist(m, f.box) > 60) return set("play", moveToward(m, f.box.x, f.box.y));
+      { const box = f.box || f.den; if (box && dist(m, box) > 60) return set("play", moveToward(m, box.x, box.y)); }
       return set("play", n.boredom > 0.85 ? A.spin : A.rest);
     }
 

@@ -31,6 +31,9 @@ export function saveLife(life) {
 }
 export const loadLife = () => run("readonly", store => store.get("home"));
 export const loadBackup = () => run("readonly", store => store.get("backup"));
+// A copy taken just before each plaza visit, kept apart from the rolling backup.
+export const savePlazaBackup = life => run("readwrite", store => store.put(life, "plaza-backup"));
+export const loadPlazaBackup = () => run("readonly", store => store.get("plaza-backup"));
 export const forgetLife = () => run("readwrite", store => { store.delete("backup"); return store.delete("home"); });
 
 // A life as one downloadable file: a JSON header line, then the brain's bytes.
