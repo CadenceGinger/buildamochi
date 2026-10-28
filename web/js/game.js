@@ -647,14 +647,58 @@ function frame(now) {
   const d = Math.max(1, Math.hypot(target.x - m.x, target.y - m.y));
   view.look = [(target.x - m.x) / d, (target.y - m.y) / d];
   drawRoom(ctx, world, view);
+  if (plaza) { try { plaza.draw(ctx, view); } catch (error) { console.warn("plaza draw", error); } }
   if (frames++ % 12 === 0) renderNeeds();
   brainView.frame(now);
   requestAnimationFrame(frame);
 }
 
+// ------------------------------------------------------------------ plaza (community addition)
+// Other owners' Mochis visit as drawings; each is driven by its own owner's local brain.
+let plaza = null;
+function plazaState() {
+  if (!ready) return null;
+  const m = world.m;
+  return { n: page.name, c: custom.cfg.coat, x: Math.round(m.x), y: Math.round(m.y), vx: Math.round(m.vx), vy: Math.round(m.vy),
+    h: +m.heading.toFixed(2), p: m.pose, t: +(m.actionT || 0).toFixed(2), s: !!m.asleep };
+}
+function plazaUi() {
+  const bar = $("plazaBar"), on = !!(plaza && plaza.room);
+  $("plazaToggle").textContent = on ? "🌐 Leave plaza" : "🌐 Join the plaza";
+  $("plazaToggle").classList.toggle("on", on);
+  bar.hidden = !on;
+  if (on) {
+    const names = plaza.names();
+    $("plazaCount").textContent = `${names.length + 1} in the plaza` + (plaza.ignored.size ? ` (full: ${plaza.ignored.size} not shown)` : "");
+    $("plazaCount").title = ["you", ...names].join(", ");   // textContent/title: names never become HTML
+  }
+}
+async function togglePlaza(force) {
+  if (plaza && plaza.room && force !== true) { plaza.leave(); toast("Left the plaza"); return; }
+  try {
+    if (!plaza) { const { Plaza } = await import("./plaza.js?v=4"); plaza = new Plaza({ getState: plazaState, onChange: plazaUi }); }
+    plaza.join(); toast(`${page.name} walked into the plaza. Other Mochis appear as they connect.`);
+  } catch (error) { console.warn("plaza unavailable", error); toast("The plaza could not connect from this browser."); }
+}
+function setupPlaza() {
+  const button = document.createElement("button"); button.id = "plazaToggle"; button.title = "Share your room with other Mochis (peer-to-peer)";
+  button.onclick = () => togglePlaza(); $("menu").before(button);
+  const bar = document.createElement("div"); bar.id = "plazaBar"; bar.hidden = true;
+  bar.style.cssText = "position:absolute;left:10px;top:10px;z-index:5;display:flex;gap:6px;align-items:center;background:rgba(13,10,26,.78);color:#e8e4ff;border:1px solid #5a4b8a;border-radius:10px;padding:5px 8px;font:12px system-ui";
+  const count = document.createElement("span"); count.id = "plazaCount"; bar.append(count);
+  for (const [key, label] of [["wave", "👋"], ["hi", "Hi!"], ["heart", "❤️"], ["star", "✨"], ["laugh", "😂"]]) {
+    const b = document.createElement("button"); b.textContent = label; b.title = `Send ${key}`;
+    b.onclick = () => { const text = plaza && plaza.emote(key); if (text) emote(text, { color: "#ffffff" }); };
+    bar.append(b);
+  }
+  $("stage").append(bar); plazaUi();
+  if (new URLSearchParams(location.search).get("plaza") === "1") togglePlaza(true);
+}
+setupPlaza();
+
 document.addEventListener("visibilitychange", () => { if (document.hidden && ticks > 20) save(false); });
-window.addEventListener("pagehide", () => { if (ticks > 20) save(false); });
-window.mochi = { get world() { return world; }, get page() { return page; }, get arousal() { return arousal; }, get ticks() { return ticks; }, get latency() { return latency; }, brainView, version: VERSION, BODY, ACTIONS };
+window.addEventListener("pagehide", () => { if (plaza) plaza.leave(); if (ticks > 20) save(false); });
+window.mochi = { get plaza() { return plaza; }, get world() { return world; }, get page() { return page; }, get arousal() { return arousal; }, get ticks() { return ticks; }, get latency() { return latency; }, brainView, version: VERSION, BODY, ACTIONS };
 
 boot();
 requestAnimationFrame(frame);
