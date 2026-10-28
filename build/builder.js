@@ -1,4 +1,4 @@
-import { DEFAULTS, STORAGE_KEY, STEP, clean, encode, loadCustom, loadCustomSync, applyCustom } from "../web/js/custom.js?v=2";
+import { DEFAULTS, STORAGE_KEY, STEP, clean, encode, loadCustom, loadCustomSync, applyCustom } from "../web/js/custom.js?v=3";
 import { World } from "../web/js/world.js";
 import { drawRoom } from "../web/js/render.js";
 
@@ -96,9 +96,9 @@ fetch("../web/brains/index.json").then(r => r.json()).then(index => {
   $("pack").value = cfg.start.pack;
 }).catch(e => console.warn("brain list unavailable", e));
 
-$("save").onclick = () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); say(`Saved. ${cfg.name} is now the default design in this browser.`); };
-$("play").onclick = () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); location.href = shareUrl(); };
-$("export").onclick = () => {
+$("save").onclick = () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); if (window.mochiCount) window.mochiCount("design-saved", "Design built (saved)"); say(`Saved. ${cfg.name} is now the default design in this browser.`); };
+$("play").onclick = () => { if (window.mochiCount) window.mochiCount("design-played", "Design built (play)"); localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); location.href = shareUrl(); };
+$("export").onclick = () => { if (window.mochiCount) window.mochiCount("design-exported", "Design built (exported)");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(cfg, null, 2)], { type: "application/json" }));
   a.download = `${(cfg.name || "mochi").replace(/[^\w-]+/g, "_")}.mochi.config.json`; a.click();
@@ -111,4 +111,4 @@ $("import").onchange = async e => {
 };
 $("forget").onclick = () => { localStorage.removeItem(STORAGE_KEY); say("Saved design removed from this browser."); };
 $("reset").onclick = () => { cfg = clean(null); fill(); update(); say("Back to the classic Mochi."); };
-$("copy").onclick = () => navigator.clipboard.writeText($("share").value).then(() => say("Link copied."), () => { $("share").select(); say("Select and copy the link."); });
+$("copy").onclick = () => { if (window.mochiCount) window.mochiCount("design-shared", "Design shared (link copied)"); return navigator.clipboard.writeText($("share").value).then(() => say("Link copied."), () => { $("share").select(); say("Select and copy the link."); }); };
