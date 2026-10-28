@@ -1,4 +1,4 @@
-import { DEFAULTS, STORAGE_KEY, STEP, clean, encode, loadCustom, loadCustomSync, applyCustom } from "../web/js/custom.js?v=3";
+import { DEFAULTS, STORAGE_KEY, STEP, clean, encode, loadCustom, loadCustomSync, applyCustom } from "../web/js/custom.js?v=4";
 import { World } from "../web/js/world.js";
 import { drawRoom } from "../web/js/render.js";
 
