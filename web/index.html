@@ -115,6 +115,7 @@
           <h3>About this copy</h3>
           <p>Mochi was created by Bernhard Mueller (<a href="https://x.com/muellerberndt" target="_blank" rel="noopener">@muellerberndt</a>) under the MIT licence: <a href="https://github.com/muellerberndt/mochi" target="_blank" rel="noopener">github.com/muellerberndt/mochi</a>. Brain: <a href="https://github.com/muellerberndt/cadence" target="_blank" rel="noopener">github.com/muellerberndt/cadence</a>.</p>
           <p><b>Not an official Pragma Research or Bernhard Mueller release.</b> This copy is hosted by the community. <a href="../build/">Build your own Mochi</a> · <a href="?plaza=1">Join the plaza</a>.</p>
+          <p><b>Plaza visitors (opt-in).</b> In the plaza, other Mochis are drawn in your room, and each one is run by its owner's own brain. By default your Mochi's brain never senses them. If you tick <i>notices visitors</i> in the plaza bar (off by default, and only you can switch it), visitors in the same room reach your Mochi's eyes as <b>movement only</b>, with a capped strength. They bring no colour, touch, reward, company or novelty, so nobody can feed, praise or train your Mochi. The marker colour you pick only draws a ring on your own screen and is never sent. Before each plaza visit a backup copy is saved. When you leave, you choose whether to keep what Mochi learned there. <button id="plazaRestore" type="button">Restore pre-plaza backup</button></p>
           <p class="fine">We count visits anonymously with <a href="https://www.goatcounter.com" target="_blank" rel="noopener">GoatCounter</a>: totals only, no cookies, no personal data.</p>
         </div>
         <div class="panel">
@@ -141,6 +142,6 @@
 
 <script>document.getElementById("copy-ca").onclick=function(){navigator.clipboard.writeText(document.getElementById("ca").textContent).then(()=>{this.textContent="Copied"},()=>{this.textContent="Select & copy"})};</script>
 <script src="js/layout.js?v=3" defer></script>
-<script type="module" src="js/game.js?v=8"></script>
+<script type="module" src="js/game.js?v=10"></script>
 </body>
 </html>
