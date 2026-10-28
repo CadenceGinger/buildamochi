@@ -2,7 +2,7 @@
 // feather, forgets the bowl now and then, and sometimes makes a noise. The bootstrap uses it so
 // a young Mochi meets the situations a player will create. Called once per decision tick.
 
-import { ROOM } from "./world.js";
+import { ROOM } from "./world.js?v=8";
 import { WORDS } from "./spec.js";
 
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);

@@ -3,12 +3,12 @@
 // until the answer arrives, and the world waits at the next decision if the brain is still
 // settling, so no outcome is ever credited to a decision that was not executed.
 
-import { custom, customReady, applyCustom } from "./custom.js?v=2";
-import { World, DT, TICK_STEPS, ROOM, BODY } from "./world.js";
-import { sense } from "./senses.js";
+import { custom, customReady, applyCustom } from "./custom.js?v=3";
+import { World, DT, TICK_STEPS, ROOM, BODY } from "./world.js?v=8";
+import { sense } from "./senses.js?v=8";
 import { Arousal } from "./arousal.js";
 import { A, ACTIONS, HEARING, OFFSETS, SOUNDS, SPEC, TRICKS, WORDS } from "./spec.js";
-import { drawRoom } from "./render.js";
+import { drawRoom } from "./render.js?v=8";
 import { BrainLink, brainIndex } from "./brainlink.js";
 import { BrainView, actionName } from "./brainview.js";
 import { Sound } from "./audio.js";
@@ -42,6 +42,8 @@ const silent = obs => { for (let cell = 0; cell < HEARING; cell++) if (obs[OFFSE
 let pointer = { x: 480, y: 300, inside: false, down: false, trail: [] };
 let drag = null;                              // {kind: "toy"|"pet"|"carry"|"treat"|"furniture", ...}
 let wandId = null;
+const LASER_SESSION = 90000;               // one laser session at most 90 s, then back to the hand
+let laserTimer = 0, laserUntil = 0;
 
 const page = {
   name: "Mochi", tool: "pet", speed: 1, skipNight: true,
@@ -116,7 +118,7 @@ async function boot() {
     page.name = custom.cfg.name; page.skipNight = custom.cfg.start.skipNight;
   }
   buildControls();
-  $("name").value = page.name; document.title = page.name;
+  $("name").value = page.name; setTitle();
   $("autoCare").checked = world.autoCare; $("skipNight").checked = page.skipNight;
   renderTodo();
   try {
@@ -154,6 +156,7 @@ async function boot() {
       if (manifest.raised && manifest.raised.untrained) toast("This pack holds an untrained brain: it starts knowing nothing.");
       world.spawnToy("ball", 300, 420).seen = 60;       // its own ball is nothing new
       diary("hatched", "hatched", 0);
+      try { if (!localStorage.getItem("bam_hatched_counted")) { localStorage.setItem("bam_hatched_counted", "1"); if (window.mochiCount) window.mochiCount("mochi-hatched", "Mochi hatched"); } } catch (e) {}
       setTimeout(() => toast("This is Mochi. It lives its own day: stroke it, feed it, teach it a word."), 1200);
     }
     bootStatus("drawing the brain", 0.92);
@@ -366,7 +369,7 @@ function buildControls() {
   $("autoCare").onchange = event => { world.autoCare = event.target.checked; };
   $("showSenses").onchange = event => { view.showSenses = event.target.checked; };
   $("skipNight").onchange = event => { page.skipNight = event.target.checked; };
-  $("name").oninput = event => { page.name = event.target.value || "Mochi"; document.title = page.name; };
+  $("name").oninput = event => { page.name = event.target.value || "Mochi"; setTitle(); };
   document.body.classList.add("brain-open");
   if (new URLSearchParams(location.search).get("brain") === "0") toggleBrain();
   window.addEventListener("keydown", event => {
@@ -382,6 +385,8 @@ function buildControls() {
   });
   renderWords();
 }
+
+function setTitle() { document.title = `${page.name} · a Mochi with a live Cadence brain · Build A Mochi`; }
 
 function toggleBrain() {
   brainView.open = !brainView.open;
@@ -404,8 +409,20 @@ function setTool(tool) {
   page.tool = tool;
   for (const button of document.querySelectorAll(".tool")) button.classList.toggle("on", button.dataset.tool === tool);
   view.rearrange = tool === "move";
-  if (tool !== "wand" && wandId !== null) { world.removeToy(wandId); wandId = null; }
-  if (tool === "wand" && wandId === null) wandId = world.spawnToy("wand", pointer.x, pointer.y + 26).id;
+  // the feather and the laser dot are one toy kind ("wand"); the laser is held tighter, pure red
+  const stringy = tool === "wand" || tool === "laser";
+  if (wandId !== null && (!stringy || !!(world.toy(wandId) || {}).laser !== (tool === "laser"))) { world.removeToy(wandId); wandId = null; }
+  if (stringy && wandId === null) {
+    const toy = tool === "laser" ? world.spawnToy("wand", pointer.x, pointer.y, { hue: 0, sat: 1 }) : world.spawnToy("wand", pointer.x, pointer.y + 26);
+    if (tool === "laser") toy.laser = true;
+    wandId = toy.id;
+  }
+  view.hideHand = tool === "laser";
+  clearTimeout(laserTimer);
+  if (tool === "laser") {
+    laserUntil = performance.now() + LASER_SESSION;
+    laserTimer = setTimeout(() => { if (page.tool === "laser") { setTool("pet"); toast(`${page.name} needs a break from the laser. Try a ball or the feather.`); } }, LASER_SESSION);
+  }
   world.holdNothing();
 }
 
@@ -458,7 +475,7 @@ canvas.addEventListener("pointerdown", event => {
     return;
   }
   if (tool === "cookie" || tool === "fish" || tool === "lemon") { world.holdTreat(tool); drag = { kind: "treat", flavor: tool, at: performance.now() }; return; }
-  if (tool === "wand") return;
+  if (tool === "wand" || tool === "laser") return;
   if (tool === "carry") { if (world.pickUp()) { drag = { kind: "carry" }; emote("!"); } return; }
   const toy = world.toys.find(item => item.kind !== "wand" && near(item, p, 10));
   if (toy) { world.grabToy(toy.id); drag = { kind: "toy", id: toy.id }; return; }
@@ -519,6 +536,7 @@ function handleEvents() {
       case "pounce": if (event.hit) { sound.pop(); done("played"); diary(`pounced on the ${event.toy}`, "pounce", 12); } break;
       case "caught": sound.pop(); emote("★", { color: "#e9a13b" }); diary(`caught the ${event.toy}`, "caught", 8); done("played"); break;
       case "kick": diary("chased the ball", "kick", 15); break;
+      case "room": diary(event.to === "garden" ? "wandered out into the garden" : "came back indoors", "room", 0); $("room").dataset.room = event.to; break;
       case "bump": emote("•", { color: "#8a6f66", size: 14 }); break;
       case "dawn": diary(`day ${event.day + 1} begins`, "dawn", 0); break;
       case "lifted": diary("was picked up", "lifted"); break;
@@ -594,7 +612,7 @@ function restore(saved) {
   arousal = Arousal.restore(saved.arousal);
   Object.assign(page, saved.page);
   if (custom.source === "url") page.name = custom.cfg.name;   // a shared Build-a-Mochi link names the pet
-  $("name").value = page.name; document.title = page.name;
+  $("name").value = page.name; setTitle();
   page.words.forEach((word, i) => { const input = document.querySelector(`#word${i} input`); if (input) input.value = word.label; });
   $("autoCare").checked = world.autoCare;
   renderWords(); renderTodo();
@@ -647,7 +665,7 @@ function frame(now) {
   const d = Math.max(1, Math.hypot(target.x - m.x, target.y - m.y));
   view.look = [(target.x - m.x) / d, (target.y - m.y) / d];
   drawRoom(ctx, world, view);
-  if (plaza) { try { plaza.draw(ctx, view); } catch (error) { console.warn("plaza draw", error); } }
+  if (plaza) { try { plaza.draw(ctx, view, world.room); } catch (error) { console.warn("plaza draw", error); } }
   if (frames++ % 12 === 0) renderNeeds();
   brainView.frame(now);
   requestAnimationFrame(frame);
@@ -660,7 +678,11 @@ function plazaState() {
   if (!ready) return null;
   const m = world.m;
   return { n: page.name, c: custom.cfg.coat, x: Math.round(m.x), y: Math.round(m.y), vx: Math.round(m.vx), vy: Math.round(m.vy),
-    h: +m.heading.toFixed(2), p: m.pose, t: +(m.actionT || 0).toFixed(2), s: !!m.asleep };
+    h: +m.heading.toFixed(2), p: m.pose, t: +(m.actionT || 0).toFixed(2), s: !!m.asleep, r: world.room, ...laserState() };
+}
+function laserState() {
+  const toy = wandId !== null && world.toy(wandId);
+  return toy && toy.laser && world.hand.present ? { l: [Math.round(toy.x), Math.round(toy.y)] } : {};
 }
 function plazaUi() {
   const bar = $("plazaBar"), on = !!(plaza && plaza.room);
@@ -676,7 +698,7 @@ function plazaUi() {
 async function togglePlaza(force) {
   if (plaza && plaza.room && force !== true) { plaza.leave(); toast("Left the plaza"); return; }
   try {
-    if (!plaza) { const { Plaza } = await import("./plaza.js?v=4"); plaza = new Plaza({ getState: plazaState, onChange: plazaUi }); }
+    if (!plaza) { const { Plaza } = await import("./plaza.js?v=8"); plaza = new Plaza({ getState: plazaState, onChange: plazaUi }); }
     plaza.join(); toast(`${page.name} walked into the plaza. Other Mochis appear as they connect.`);
   } catch (error) { console.warn("plaza unavailable", error); toast("The plaza could not connect from this browser."); }
 }

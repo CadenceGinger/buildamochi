@@ -1,7 +1,7 @@
 // Drawing only. Everything here reads the world and the last answer of the brain; nothing here
 // decides what Mochi does. Poses follow the action the brain chose, faces follow measured needs.
 
-import { BODY, ROOM, FLAVORS } from "./world.js";
+import { BODY, ROOM, FLAVORS, DOOR } from "./world.js?v=8";
 
 const TAU = Math.PI * 2;
 const hsl = (h, s, l, a = 1) => `hsla(${h},${s}%,${l}%,${a})`;
@@ -31,6 +31,7 @@ export function drawRoom(ctx, world, view) {
   const { w, h, wall } = ROOM;
   const light = world.light(), tod = world.tod(), now = view.time;
 
+  if (world.room === "garden") { drawGarden(ctx, world, view); return; }
   // floor and planks
   ctx.fillStyle = "#ecd6b4"; ctx.fillRect(0, 0, w, h);
   ctx.strokeStyle = "rgba(160,120,80,0.16)"; ctx.lineWidth = 1;
@@ -46,6 +47,9 @@ export function drawRoom(ctx, world, view) {
   ctx.fillStyle = "#c79f77";
   ctx.fillRect(0, 0, w, wall); ctx.fillRect(0, h - wall, w, wall); ctx.fillRect(0, 0, wall, h); ctx.fillRect(w - wall, 0, wall, h);
   ctx.fillStyle = "rgba(90,60,40,0.18)"; ctx.fillRect(wall, wall, w - 2 * wall, 5); ctx.fillRect(wall, wall, 5, h - 2 * wall);
+  // the doorway to the garden
+  ctx.fillStyle = "#7fbf6a"; ctx.fillRect(w - wall, DOOR.y - DOOR.half, wall, DOOR.half * 2);
+  ctx.fillStyle = "#8b6747"; ctx.fillRect(w - wall - 3, DOOR.y - DOOR.half - 6, wall + 3, 6); ctx.fillRect(w - wall - 3, DOOR.y + DOOR.half, wall + 3, 6);
   const [top, bottom] = sky(light, tod);
   const gradient = ctx.createLinearGradient(0, 2, 0, wall - 2);
   gradient.addColorStop(0, top); gradient.addColorStop(1, bottom);
@@ -69,6 +73,11 @@ export function drawRoom(ctx, world, view) {
   }
 
   drawFurniture(ctx, world, view);
+  drawRest(ctx, world, view);
+}
+
+function drawRest(ctx, world, view) {
+  const { w, h } = ROOM, light = world.light(), now = view.time;
   for (const food of world.foods) drawTreat(ctx, food.x, food.y, food.flavor);
   for (const toy of world.toys) if (toy.kind !== "wand") drawToy(ctx, toy, now);
 
@@ -80,7 +89,7 @@ export function drawRoom(ctx, world, view) {
   }
 
   drawMochi(ctx, world, view);
-  for (const toy of world.toys) if (toy.kind === "wand") drawWand(ctx, toy, world.hand);
+  for (const toy of world.toys) if (toy.kind === "wand") (toy.laser ? drawLaser(ctx, toy, now) : drawWand(ctx, toy, world.hand));
   drawHand(ctx, world, view);
 
   // night
@@ -93,6 +102,43 @@ export function drawRoom(ctx, world, view) {
     }
   }
   drawEmotes(ctx, world, view);
+}
+
+// The garden: same size and the same landmark kinds and hues as indoors (a purple blanket to
+// sleep on, an orange bowl, a blue pond, a green hedge den), so the brain's senses read it alike.
+function drawGarden(ctx, world, view) {
+  const { w, h, wall } = ROOM, light = world.light();
+  ctx.fillStyle = "#9fd286"; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(60,120,50,0.18)";
+  for (let i = 0; i < 160; i++) { const x = (i * 197) % w, y = (i * 331) % h; ctx.fillRect(x, y, 2, 7); }
+  ctx.fillStyle = "rgba(255,255,255,0.75)";                       // decorative daisies, not sensed
+  for (const [x, y] of [[420, 120], [560, 470], [700, 260], [300, 380], [610, 150], [470, 330]]) { ctx.beginPath(); ctx.arc(x, y, 3, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = "#c9a36b"; ctx.globalAlpha = 0.55;                // a path from the door
+  roundRect(ctx, 0, DOOR.y - 40, 300, 80, 30); ctx.fill(); ctx.globalAlpha = 1;
+  ctx.fillStyle = "#5c9a4a";                                        // fence-hedge walls
+  ctx.fillRect(0, 0, w, wall); ctx.fillRect(0, h - wall, w, wall); ctx.fillRect(0, 0, wall, h); ctx.fillRect(w - wall, 0, wall, h);
+  ctx.fillStyle = "#ecd6b4"; ctx.fillRect(0, DOOR.y - DOOR.half, wall, DOOR.half * 2);   // the doorway back in
+  ctx.fillStyle = "#8b6747"; ctx.fillRect(0, DOOR.y - DOOR.half - 6, wall + 3, 6); ctx.fillRect(0, DOOR.y + DOOR.half, wall + 3, 6);
+  const sun = world.sun();
+  if (light > 0.02) {
+    const glow = ctx.createRadialGradient(sun.x, sun.y, 4, sun.x, sun.y, sun.rx * 1.25);
+    glow.addColorStop(0, `rgba(255,236,150,${0.6 * light})`); glow.addColorStop(1, "rgba(255,236,150,0)");
+    ctx.save(); ctx.translate(sun.x, sun.y); ctx.scale(1, sun.ry / sun.rx); ctx.translate(-sun.x, -sun.y);
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(sun.x, sun.y, sun.rx * 1.25, 0, TAU); ctx.fill(); ctx.restore();
+  }
+  const f = world.furniture;
+  roundRect(ctx, f.bed.x - f.bed.r, f.bed.y - f.bed.r * 0.8, f.bed.r * 2, f.bed.r * 1.6, 10); ctx.fillStyle = "#8c6cc0"; ctx.fill();
+  ctx.strokeStyle = "#cdb6ee"; ctx.lineWidth = 3; ctx.setLineDash([8, 8]); ctx.stroke(); ctx.setLineDash([]);
+  ellipse(ctx, f.bowl.x, f.bowl.y + 3, f.bowl.r, f.bowl.r * 0.8, "#d9792b");
+  ellipse(ctx, f.bowl.x, f.bowl.y, f.bowl.r - 6, f.bowl.r * 0.8 - 5, "#f6e3c8");
+  ctx.fillStyle = "#9a5b2c";
+  for (let i = 0; i < Math.round(f.bowl.food * 5); i++) { const a = i * 2.4, r = 3 + (i % 5) * 3.1; ctx.beginPath(); ctx.arc(f.bowl.x + Math.cos(a) * r, f.bowl.y + Math.sin(a) * r * 0.75, 2.6, 0, TAU); ctx.fill(); }
+  const level = Math.max(0, Math.min(1, f.water.level / 4));
+  ellipse(ctx, f.water.x, f.water.y, f.water.r + 10, (f.water.r + 10) * 0.7, "#6f9f5a");
+  ellipse(ctx, f.water.x, f.water.y, (f.water.r + 4) * (0.5 + 0.5 * level), (f.water.r + 4) * 0.7 * (0.5 + 0.5 * level), "#3f7fd0");
+  for (const [dx, dy, r] of [[-14, -6, 22], [12, -10, 24], [0, 10, 26], [-20, 12, 18], [22, 10, 18]]) ellipse(ctx, f.box.x + dx, f.box.y + dy, r, r * 0.85, "#4f9d63");
+  ctx.fillStyle = "#ffe07a"; ctx.font = "16px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("★", f.box.x, f.box.y);
+  drawRest(ctx, world, view);
 }
 
 function drawFurniture(ctx, world, view) {
@@ -167,6 +213,17 @@ function drawWand(ctx, toy, hand) {
   }
   ctx.save(); ctx.translate(toy.x, toy.y); ctx.rotate(Math.atan2(toy.vy, toy.vx || 1e-6) + Math.PI / 2);
   for (const [dx, tint] of [[-5, 62], [0, 70], [5, 62]]) ellipse(ctx, dx, 0, 4, 11, hsl(330, 80, tint), hsl(330, 55, 45), 1);
+  ctx.restore();
+}
+
+export function drawLaser(ctx, toy, now = 0) {
+  const flicker = 0.85 + 0.15 * Math.sin(now * 40);
+  ctx.save();
+  const glow = ctx.createRadialGradient(toy.x, toy.y, 0, toy.x, toy.y, 16);
+  glow.addColorStop(0, `rgba(255,40,40,${0.55 * flicker})`); glow.addColorStop(1, "rgba(255,40,40,0)");
+  ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(toy.x, toy.y, 16, 0, TAU); ctx.fill();
+  ctx.fillStyle = "#ff2a2a"; ctx.beginPath(); ctx.arc(toy.x, toy.y, 4.5, 0, TAU); ctx.fill();
+  ctx.fillStyle = "#ffd6d6"; ctx.beginPath(); ctx.arc(toy.x - 1, toy.y - 1, 1.6, 0, TAU); ctx.fill();
   ctx.restore();
 }
 

@@ -5,7 +5,7 @@
 // view), so the routine she shows is one a brain with those senses can hold.
 
 import { A } from "./spec.js";
-import { BODY, DIRS } from "./world.js";
+import { BODY, DIRS } from "./world.js?v=8";
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 

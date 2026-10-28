@@ -4,8 +4,8 @@
 // record (~8 Hz). Visitors are drawn only: they are NOT fed into this brain's senses, because the
 // brain was never raised with other creatures (see PLAZA notes in the report / README).
 import { joinRoom, selfId } from "./vendor/trystero-nostr-0.26.0.mjs";
-import { COAT, drawMochi } from "./render.js";
-import { clean } from "./custom.js?v=2";
+import { COAT, drawMochi, drawLaser } from "./render.js?v=8";
+import { clean } from "./custom.js?v=3";
 
 export const ROOM_ID = "buildamochi-plaza";
 const APP_ID = "buildamochi.com/plaza/v1";
@@ -28,6 +28,8 @@ function cleanState(raw) {
     vx: num(raw.vx, -400, 400), vy: num(raw.vy, -400, 400),
     heading: num(raw.h, -7, 7), actionT: num(raw.t, 0, 30),
     pose: POSES.has(raw.p) ? raw.p : "stand", asleep: !!raw.s,
+    room: raw.r === "garden" ? "garden" : "home",       // older clients send none: home
+    laser: Array.isArray(raw.l) ? { x: num(raw.l[0], 0, 960, -1), y: num(raw.l[1], 0, 600, -1) } : null,
   };
 }
 
@@ -51,6 +53,7 @@ export class Plaza {
   join() {
     if (this.room) return;
     this.room = joinRoom({ appId: APP_ID }, ROOM_ID);
+    if (window.mochiCount) window.mochiCount("plaza-joined", "Plaza joined");
     // Trystero 0.26 API: makeAction returns {send, onMessage}; handlers get (data, {peerId}).
     const stAction = this.room.makeAction("st"), emAction = this.room.makeAction("em");
     const sendState = data => stAction.send(data);
@@ -109,12 +112,14 @@ export class Plaza {
   names() { return [...this.peers.values()].filter(p => p.state).map(p => p.state.name); }
 
   // Draws every visitor into the room; call after drawRoom.
-  draw(ctx, view) {
+  draw(ctx, view, room = "home") {
     const now = performance.now();
     for (const peer of this.peers.values()) {
       const s = peer.state; if (!s) continue;
+      if (s.room !== room) { peer.shown.x = s.x; peer.shown.y = s.y; continue; }   // only visitors in the same room
       peer.shown.x += (s.x - peer.shown.x) * 0.25; peer.shown.y += (s.y - peer.shown.y) * 0.25;
       const m = { ...s, x: peer.shown.x, y: peer.shown.y, needs: { hunger: 0, thirst: 0, fatigue: 0, boredom: 0, lonely: 0 }, touch: { stroke: 0, boop: 0 }, taste: { good: 0, bad: 0 } };
+      if (s.laser) { ctx.save(); ctx.globalAlpha = 0.6; drawLaser(ctx, s.laser, view.time); ctx.restore(); }
       ctx.save(); ctx.globalAlpha = 0.92;
       withCoat(s.coat, () => drawMochi(ctx, { m, hand: { present: false } }, { ...view, emotes: [], look: [Math.cos(s.heading), Math.sin(s.heading)], alert: 0, blink: false }));
       ctx.restore();

@@ -47,6 +47,11 @@ export const FURNITURE = {
   water: { x: 830, y: 480, r: 24, hue: 215 },
   box: { x: 130, y: 480, r: 40, hue: 130 },
 };
+// A doorway: the gap in the home's east wall opens onto the garden's west wall. Both rooms share
+// ROOM's size and the same landmark kinds and hues, each in its own coordinate frame, so the
+// brain's place cells, wall touch and hue meanings mean the same thing in either room.
+export const DOOR = { y: 460, half: 75 };
+export const ROOMS = ["home", "garden"];
 export const BOWL_PORTIONS = 3;
 export const WATER_UNITS = 4;
 export const SUN = { from: [330, 200], to: [640, 400], rx: 74, ry: 50, hue: 60 };
@@ -78,6 +83,10 @@ export class World {
     this.furniture.water.level = WATER_UNITS;
     this.toys = [];
     this.foods = [];
+    this.room = "home";
+    this.away = { furniture: JSON.parse(JSON.stringify(FURNITURE)), toys: [], foods: [] };
+    this.away.furniture.bowl.food = BOWL_PORTIONS; this.away.furniture.water.level = WATER_UNITS;
+    this.doorCd = 0;
     this.hand = { present: false, x: 480, y: 300, petting: false, holding: null };
     this.sounds = {};
     this.events = [];
@@ -297,7 +306,7 @@ export class World {
     if (tod < before) {                       // dawn
       this.day += 1;
       this.events.push({ type: "dawn", day: this.day });
-      if (this.autoCare) { this.furniture.bowl.food = BOWL_PORTIONS; this.furniture.water.level = WATER_UNITS; this.sound("rattle", 0.7); }
+      if (this.autoCare) { for (const f of [this.furniture, this.away.furniture]) { f.bowl.food = BOWL_PORTIONS; f.water.level = WATER_UNITS; } this.sound("rattle", 0.7); }
     }
 
     // needs rise on their own clocks
@@ -343,8 +352,15 @@ export class World {
       m.x += m.vx * dt; m.y += m.vy * dt;
       const lo = ROOM.wall + BODY.radius, hiX = ROOM.w - lo, hiY = ROOM.h - lo;
       let hit = 0;
-      if (m.x < lo) { hit = Math.max(hit, -m.vx); m.x = lo; m.vx = 0; m.touch.wallW = 1; }
-      if (m.x > hiX) { hit = Math.max(hit, m.vx); m.x = hiX; m.vx = 0; m.touch.wallE = 1; }
+      // the doorway: no wall there, and walking right through it lands in the other room
+      const inDoor = Math.abs(m.y - DOOR.y) < DOOR.half - BODY.radius * 0.5;
+      const doorE = this.room === "home" && inDoor, doorW = this.room === "garden" && inDoor;
+      this.doorCd = Math.max(0, this.doorCd - dt);
+      if (doorE && m.x >= hiX && m.vx > 0 && this.doorCd <= 0) this.crossDoor(lo + 2);
+      else if (doorW && m.x <= lo && m.vx < 0 && this.doorCd <= 0) this.crossDoor(hiX - 2);
+      if (m.x < lo && !(doorW && this.doorCd <= 0)) { hit = Math.max(hit, -m.vx); m.x = lo; m.vx = 0; m.touch.wallW = 1; }
+      if (m.x > hiX && !(doorE && this.doorCd <= 0)) { hit = Math.max(hit, m.vx); m.x = hiX; m.vx = 0; m.touch.wallE = 1; }
+      if ((doorE || doorW) && (m.x < lo || m.x > hiX)) m.y = clamp(m.y, DOOR.y - DOOR.half + BODY.radius * 0.5, DOOR.y + DOOR.half - BODY.radius * 0.5);
       if (m.y < lo) { hit = Math.max(hit, -m.vy); m.y = lo; m.vy = 0; m.touch.wallN = 1; }
       if (m.y > hiY) { hit = Math.max(hit, m.vy); m.y = hiY; m.vy = 0; m.touch.wallS = 1; }
       if (hit > 40 && m.bumpCd <= 0) {
@@ -493,8 +509,10 @@ export class World {
       if (toy.kind === "wand") {
         if (!hand.present) { toy.vx *= Math.exp(-toy.drag * dt); toy.vy *= Math.exp(-toy.drag * dt); }
         else {                                // a feather on a string: it lags the hand
-          toy.vx += ((hand.x - toy.x) * 60 - toy.vx * 9) * dt;
-          toy.vy += ((hand.y + 26 - toy.y) * 60 - toy.vy * 9) * dt;
+          // the laser dot (community addition) is the same toy held tighter, right under the pointer
+          const k = toy.laser ? 160 : 60, damp = toy.laser ? 22 : 9, off = toy.laser ? 0 : 26;
+          toy.vx += ((hand.x - toy.x) * k - toy.vx * damp) * dt;
+          toy.vy += ((hand.y + off - toy.y) * k - toy.vy * damp) * dt;
         }
       } else if (toy.inHand) {
         toy.vx = (hand.x - toy.x) / dt * 0.25; toy.vy = (hand.y - toy.y) / dt * 0.25;
@@ -547,11 +565,24 @@ export class World {
     return best;
   }
 
+  // Swap rooms: what Mochi carries (a held toy, the wand or laser on the hand) comes along.
+  crossDoor(x) {
+    const m = this.m, from = this.room;
+    const comes = toy => toy.kind === "wand" || toy.inHand;
+    const carried = this.toys.filter(comes);
+    const here = { furniture: this.furniture, toys: this.toys.filter(t => !comes(t)), foods: this.foods };
+    this.furniture = this.away.furniture; this.toys = this.away.toys.concat(carried); this.foods = this.away.foods;
+    this.away = here;
+    this.room = ROOMS[(ROOMS.indexOf(from) + 1) % ROOMS.length];
+    m.x = x; this.doorCd = 1.0;
+    this.events.push({ type: "room", from, to: this.room });
+  }
+
   // ---------------------------------------------------------------- saving
   snapshot() {
     return JSON.parse(JSON.stringify({
       schema: "mochi-world/1", rngState: this.rngState, t: this.t, daySeconds: this.daySeconds,
-      tod0: this.tod0, day: this.day, autoCare: this.autoCare, furniture: this.furniture,
+      tod0: this.tod0, day: this.day, autoCare: this.autoCare, furniture: this.furniture, room: this.room, away: this.away,
       toys: this.toys, foods: this.foods, sounds: this.sounds, nextId: this.nextId, m: this.m,
     }));
   }
@@ -562,6 +593,7 @@ export class World {
     for (const key of ["rngState", "t", "daySeconds", "tod0", "day", "autoCare", "furniture", "toys", "foods", "sounds", "nextId", "m"]) {
       world[key] = copy[key];
     }
+    if (copy.room && copy.away) { world.room = copy.room; world.away = copy.away; for (const t of world.away.toys) t.inHand = false; }
     for (const toy of world.toys) toy.inHand = false;
     world.m.held = false;
     return world;

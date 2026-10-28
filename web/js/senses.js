@@ -3,7 +3,7 @@
 // teacher goal or lesson answer is a sense: sight carries hue, bearing and range; smell carries
 // odour bearing and quality; hearing carries a cochlear pattern.
 
-import { BODY, DIRS, ROOM, FLAVORS } from "./world.js";
+import { BODY, DIRS, ROOM, FLAVORS, DOOR } from "./world.js?v=8";
 import {
   BEARINGS, HUES, HUE_WIDTH, INPUTS, NEEDS, NEED_LEVELS, OFFSETS, PLACE_GRID, SOUNDS,
 } from "./spec.js";
@@ -64,6 +64,8 @@ export function sense(world, out = new Float32Array(INPUTS)) {
     for (const item of Object.values(world.furniture)) see(item.x, item.y, item.hue, 1);
     const sun = world.sun();
     if (sun.on) see(sun.x, sun.y, 60, 0.8);
+    // daylight spilling in through the garden doorway: yellow, the hue that already means sunlight
+    if (world.room === "home" && sun.on) see(ROOM.w - ROOM.wall, DOOR.y, 60, 0.6);
     for (const toy of world.toys) see(toy.x, toy.y, toy.hue, toy.sat);
     for (const food of world.foods) see(food.x, food.y, FLAVORS[food.flavor].hue, 0.7);
 
@@ -93,7 +95,15 @@ export function sense(world, out = new Float32Array(INPUTS)) {
   {
     const at = OFFSETS.smell, nose = m.asleep ? 0.5 : 1;
     const quality = { savoury: 8, sweet: 9, bitter: 10 };
-    for (const source of world.foodSources()) {
+    // the other room's bowl and treats smell faintly from the doorway
+    const doorX = world.room === "home" ? ROOM.w - ROOM.wall : ROOM.wall;
+    const drift = [];
+    if (world.away) {
+      const bowl = world.away.furniture.bowl;
+      if (bowl.food > 1e-6) drift.push({ x: doorX, y: DOOR.y, taste: "savoury", strength: 0.5 });
+      for (const food of world.away.foods) drift.push({ x: doorX, y: DOOR.y, taste: FLAVORS[food.flavor].taste, strength: 0.4 });
+    }
+    for (const source of world.foodSources().concat(drift)) {
       const d = bearings(source.x - m.x, source.y - m.y, bearing);
       const strength = nose * source.strength / (1 + (d / BODY.smell) ** 2);
       for (let b = 0; b < BEARINGS; b++) add(at + b, bearing[b] * strength);
