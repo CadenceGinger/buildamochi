@@ -3,40 +3,44 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mochi</title>
+<title>Mochi · a pet with a live Cadence brain · Build A Mochi</title>
+<meta name="theme-color" content="#0d0a1a">
 <meta name="description" content="Mochi is a small creature with a live Cadence brain. It follows a routine, learns from you while it lives, and lets you watch its brain work.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3CradialGradient id='g' cx='.3' cy='.75' r='1'%3E%3Cstop offset='0' stop-color='%239945FF'/%3E%3Cstop offset='.5' stop-color='%235A8FE0'/%3E%3Cstop offset='1' stop-color='%2314F195'/%3E%3C/radialGradient%3E%3Ccircle cx='32' cy='34' r='24' fill='url(%23g)' stroke='%230d0a1a' stroke-width='3'/%3E%3Ccircle cx='24' cy='32' r='3.4' fill='%230b0714'/%3E%3Ccircle cx='40' cy='32' r='3.4' fill='%230b0714'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=6">
+<script>window.mochiCount=function(p,t){try{if(window.goatcounter&&window.goatcounter.count)window.goatcounter.count({path:"event/"+p,title:t||p,event:true});}catch(e){}};</script>
+<script data-goatcounter="https://buildamochi.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
 <div id="app">
   <header id="top">
-    <div class="brand"><span class="dot"></span><input id="name" value="Mochi" maxlength="14" spellcheck="false" aria-label="Name"></div>
-    <div id="clock">day 1 · 06:00</div>
-    <div id="mood">waking up</div>
+    <div class="brand"><span class="dot" aria-hidden="true"></span><input id="name" value="Mochi" maxlength="14" spellcheck="false" aria-label="Name"></div>
+    <div class="status"><span id="clock">day 1 · 06:00</span><span id="mood">waking up</span></div>
     <div class="spacer"></div>
-    <div class="group" id="speed" role="group" aria-label="Speed">
-      <button data-speed="0" title="Pause (space)">❚❚</button>
-      <button data-speed="1" class="on">1×</button>
-      <button data-speed="2">2×</button>
-      <button data-speed="4">4×</button>
-    </div>
-    <button id="sound" title="Sound">🔈</button>
-    <button id="brainToggle" class="on" title="Brain view (B)">🧠 Brain</button>
-    <span id="saved" class="fine" title="Mochi is saved in this browser automatically">not saved yet</span>
-    <button id="save" title="Save now. Saving also happens by itself.">Save</button>
-    <a id="buildLink" href="../build/" title="Build your own Mochi" style="color:#14F195;text-decoration:none;font-size:13px;padding:4px 8px;border:1px solid #5a4b8a;border-radius:6px">🎨 Build yours</a>
-    <button id="menu" title="More">⋯</button>
+    <nav class="bar" aria-label="Game">
+      <div class="group" id="speed" role="group" aria-label="Speed">
+        <button data-speed="0" title="Pause (space)">❚❚</button>
+        <button data-speed="1" class="on">1×</button>
+        <button data-speed="2">2×</button>
+        <button data-speed="4">4×</button>
+      </div>
+      <button id="sound" title="Sound" aria-label="Sound">🔈</button>
+      <button id="brainToggle" class="on" title="Brain view (B)">🧠 <span class="lbl">Brain</span></button>
+      <span id="saved" class="fine" title="Mochi is saved in this browser automatically">not saved yet</span>
+      <button id="save" title="Save now. Saving also happens by itself.">Save</button>
+      <a id="buildLink" class="btn accent" href="../build/" title="Build your own Mochi">🎨 <span class="lbl">Build yours</span></a>
+      <button id="menu" title="Settings and saves" aria-label="Settings">⚙️</button>
+    </nav>
   </header>
 
-  <main>
-    <section id="stage">
+  <main id="layout">
+    <div id="play">
+      <section id="stage">
       <canvas id="room" width="960" height="600"></canvas>
       <div id="boot"><div class="card"><div class="egg">🥚</div><div id="bootText">waking the brain</div><div class="bar"><i id="bootBar"></i></div><div class="fine">The brain runs in your browser. The first load fetches Python and takes a few seconds.</div></div></div>
       <div id="toast"></div>
     </section>
-
-    <section id="controls">
+      <section id="controls">
       <div class="row">
         <span class="label">Hand</span>
         <button class="tool on" data-tool="pet" title="Stroke Mochi, throw toys, fill the bowl">✋ Pet</button>
@@ -45,6 +49,7 @@
         <button class="tool" data-tool="fish">🐟 Fish</button>
         <button class="tool" data-tool="lemon">🍋 Lemon</button>
         <button class="tool" data-tool="wand" title="A feather on a string">🪶 Feather</button>
+        <button class="tool" data-tool="laser" id="laserTool" title="A laser dot under your pointer. Sessions stop after 90 s so Mochi gets a break.">🔴 Laser</button>
         <span class="sep"></span>
         <button id="addBall" title="A new ball">🎾 Ball</button>
         <button id="addMouse" title="A wind-up mouse">🐭 Mouse</button>
@@ -65,16 +70,17 @@
         <span class="hint">Say a word, hold a move while it rings, then say Good!</span>
       </div>
     </section>
+    </div>
 
-    <section id="panels">
-      <div class="panel" id="needsPanel"><h3>Needs</h3><div id="needs"></div></div>
-      <div class="panel" id="wordsPanel"><h3>Words</h3><div id="wordBook"></div></div>
-      <div class="panel" id="todoPanel"><h3>Things to try</h3><ul id="todo"></ul></div>
-      <div class="panel" id="diaryPanel"><h3>Diary</h3><div id="diary"></div></div>
-    </section>
-  </main>
-
-  <aside id="brain" class="open">
+    <aside id="side" aria-label="Mochi's panels">
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="brain">🧠 Brain</button>
+        <button role="tab" data-tab="care">❤️ Care</button>
+        <button role="tab" data-tab="words">💬 Words</button>
+        <button role="tab" data-tab="diary">📔 Diary</button>
+        <button role="tab" data-tab="about">ℹ️ About</button>
+      </div>
+      <section id="brain" class="open tabpane" data-pane="brain">
     <div class="head">
       <div class="title">Brain</div>
       <div id="mode" class="chip">starting</div>
@@ -100,7 +106,27 @@
     <div id="intent"><h4>What Mochi is about to do</h4><div id="intentBars"></div></div>
     <div id="brainStats" class="fine"></div>
     <div id="brainFacts" class="fine"></div>
-  </aside>
+  </section>
+      <section class="tabpane" data-pane="care"><div class="panel" id="needsPanel"><h3>Needs</h3><div id="needs"></div></div><div class="panel" id="todoPanel"><h3>Things to try</h3><ul id="todo"></ul></div></section>
+      <section class="tabpane" data-pane="words"><div class="panel" id="wordsPanel"><h3>Words</h3><div id="wordBook"></div></div></section>
+      <section class="tabpane" data-pane="diary"><div class="panel" id="diaryPanel"><h3>Diary</h3><div id="diary"></div></div></section>
+      <section class="tabpane" data-pane="about" id="community-info">
+        <div class="panel">
+          <h3>About this copy</h3>
+          <p>Mochi was created by Bernhard Mueller (<a href="https://x.com/muellerberndt" target="_blank" rel="noopener">@muellerberndt</a>) under the MIT licence: <a href="https://github.com/muellerberndt/mochi" target="_blank" rel="noopener">github.com/muellerberndt/mochi</a>. Brain: <a href="https://github.com/muellerberndt/cadence" target="_blank" rel="noopener">github.com/muellerberndt/cadence</a>.</p>
+          <p><b>Not an official Pragma Research or Bernhard Mueller release.</b> This copy is hosted by the community. <a href="../build/">Build your own Mochi</a> · <a href="?plaza=1">Join the plaza</a>.</p>
+          <p class="fine">We count visits anonymously with <a href="https://www.goatcounter.com" target="_blank" rel="noopener">GoatCounter</a>: totals only, no cookies, no personal data.</p>
+        </div>
+        <div class="panel">
+          <h3>$CADENCE</h3>
+          <p>Official $CADENCE contract (Solana):<br><code id="ca">46doJPsSjEVMsNZm4b32UbbvbUXjFTM3TDPBWMM3pump</code> <button id="copy-ca">Copy</button></p>
+          <p class="warn">&#9888; Beware fake airdrops and Mochi tokens. None of them are official.</p>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <footer id="foot">Mochi by <a href="https://github.com/muellerberndt/mochi" target="_blank" rel="noopener">Bernhard Mueller</a> (MIT) · brain by <a href="https://github.com/muellerberndt/cadence" target="_blank" rel="noopener">Cadence</a> · <b>Community-run, not affiliated with Bernhard Mueller or Pragma Research.</b> <span class="warn">&#9888; Beware fake airdrops and Mochi tokens.</span></footer>
 </div>
 
 <dialog id="more">
@@ -113,15 +139,8 @@
   <div class="row"><button id="closeMore">Close</button></div>
 </dialog>
 
-<div id="community-info" style="position:fixed;left:8px;bottom:8px;z-index:9999;max-width:340px;font:12px/1.4 system-ui,sans-serif;color:#e8e4ff;background:rgba(13,10,26,.85);border:1px solid #5a4b8a;border-radius:8px;padding:6px 10px">
-<details><summary style="cursor:pointer">Community-hosted &middot; Powered by Cadence</summary>
-<p style="margin:6px 0">Mochi was created by Bernhard Mueller (<a style="color:#14F195" href="https://x.com/muellerberndt" target="_blank" rel="noopener">@muellerberndt</a>) under the MIT licence: <a style="color:#14F195" href="https://github.com/muellerberndt/mochi" target="_blank" rel="noopener">github.com/muellerberndt/mochi</a>. Brain: <a style="color:#14F195" href="https://github.com/muellerberndt/cadence" target="_blank" rel="noopener">github.com/muellerberndt/cadence</a>.</p>
-<p style="margin:6px 0"><b>Not an official Pragma Research or Bernhard Mueller release.</b> This copy is hosted by the community. <a style="color:#14F195" href="../build/">Build your own Mochi</a>.</p>
-<p style="margin:6px 0">Official $CADENCE contract (Solana):<br><code id="ca" style="word-break:break-all">46doJPsSjEVMsNZm4b32UbbvbUXjFTM3TDPBWMM3pump</code>
-<button id="copy-ca" style="margin-left:4px;font-size:11px">Copy</button></p>
-<p style="margin:6px 0;color:#ffb4b4">&#9888; Beware fake airdrops and Mochi tokens. None of them are official.</p>
-</details></div>
 <script>document.getElementById("copy-ca").onclick=function(){navigator.clipboard.writeText(document.getElementById("ca").textContent).then(()=>{this.textContent="Copied"},()=>{this.textContent="Select & copy"})};</script>
-<script type="module" src="js/game.js?v=3"></script>
+<script src="js/layout.js?v=3" defer></script>
+<script type="module" src="js/game.js?v=8"></script>
 </body>
 </html>
