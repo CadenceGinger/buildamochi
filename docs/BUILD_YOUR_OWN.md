@@ -158,4 +158,4 @@ app and the brains of a public repository through the jsDelivr CDN: put your own
 ## Licence
 
 Mochi is MIT licensed. Do what you like with a fork and keep the notice. The Cadence wheel
-inside a brain pack is the unmodified library under its own GPL-3.0 licence.
+inside a brain pack is the unmodified library under its own GPL-3.0 licence, so a site you publish that bundles it should be shared under GPL-3.0 with its source available.
