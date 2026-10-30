@@ -1,5 +1,5 @@
 {
- "default": "mochi-0.89.0-a",
+ "default": "mochi-0.91.2-a",
  "packs": [
   {
    "id": "mochi-0.74.0-a",
@@ -85,6 +85,24 @@
    "name": "Mochi with learnable recall (Cadence 0.89, experimental)",
    "cadence": "0.89.0",
    "created": "2026-10-27",
+   "neurons": 1710,
+   "synapses": 622080,
+   "raised": {}
+  },
+  {
+   "id": "mochi-0.91.2-a",
+   "name": "Basic Mochi (Cadence 0.91.2)",
+   "cadence": "0.91.2",
+   "created": "2026-10-30",
+   "neurons": 1264,
+   "synapses": 393728,
+   "raised": {}
+  },
+  {
+   "id": "mochi-0.91.2-recall",
+   "name": "Mochi with learnable recall (Cadence 0.91.2, experimental)",
+   "cadence": "0.91.2",
+   "created": "2026-10-30",
    "neurons": 1710,
    "synapses": 622080,
    "raised": {}
