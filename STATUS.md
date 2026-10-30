@@ -1,5 +1,15 @@
 # Status
 
+## Current version (2026-10-30)
+
+The site now runs on `cadence-net` 0.91.2. The default brain pack is `mochi-0.91.2-a`; `mochi-0.91.2-recall` is
+also available, and the older 0.89.0 and 0.74.0 packs remain for existing saves. On the same seeds, 0.91.2 gives
+results identical to 0.91.1 (and 0.91.1 to 0.89.0) in every simulation, save and reload continue exactly, and
+memory stays flat over 30,000 ticks. The 0.91.2 wheel in the packs is built from the PyPI sdist. Mochi still
+adapts only by online learning.
+The measurements below date from the original 0.74.0 release and are kept for reference.
+
+
 Measured on 2026-10-05 with `cadence-net` 0.74.0. Headless runs use the page's own world
 (`web/js/`) in Node and the page's own brain host (`mochi/`) as a native process. Sweeps and
 bootstraps ran on one AWS c7i.16xlarge; page and Pyodide timings on an Apple M4 that other
