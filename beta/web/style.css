@@ -61,6 +61,9 @@ code { font-size: 12px; word-break: break-all; background: var(--bg2); padding: 
 #toast { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 7px 14px; border-radius: 999px; background: rgba(13, 10, 26, .88); color: #fff;
   opacity: 0; transition: opacity .3s; pointer-events: none; max-width: 92%; text-align: center; z-index: 2; border: 1px solid var(--line2); }
 #toast.show { opacity: 1; }
+#needAlert { position: absolute; left: 12px; top: 12px; padding: 6px 12px; border-radius: 999px; background: rgba(13, 10, 26, .9); color: #ffd27a;
+  border: 1px solid #ffd27a; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 2; }
+#needAlert.show { opacity: 1; }
 
 /* controls under the room */
 #controls { display: grid; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
