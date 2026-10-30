@@ -3,12 +3,15 @@
 // sleep, and dusk) it tests each word in private imagination ("probe": nothing is lived or learned)
 // and keeps a skills card per word: how often Mochi would answer the word's trick when it hears
 // the word, against silence and against the other words, and whether that survived the night.
-export const COACHED = 3;                       // words 1..3: sit, spin, hop
+export const COACHED = 3;                       // words 1..3: sit, spin, jump
 export const DEFAULT_TRICKS = ["sit", "spin", "jump"];
 const DAILY_LESSONS = 8;                       // past this, the coach says sleep on it
 export const TOO_NEEDY = 0.8;                  // hunger or thirst above this: no lessons, feed first
 export const tooNeedy = needs => !!needs && (needs.hunger > TOO_NEEDY || needs.thirst > TOO_NEEDY);
 
+// Dusk bowl nudge: before dark, a hungry or thirsty Mochi is shown the bowl or dish (Show eat there).
+export const NUDGE = 0.5;
+export const wantsNudge = needs => !!needs && (needs.hunger > NUDGE || needs.thirst > NUDGE);
 export class Motherboard {
   constructor(saved) {
     const s = saved && saved.schema === "motherboard/1" ? saved : null;

@@ -74,8 +74,12 @@ const LEARN = {
   water: { x: 820, y: 520, r: 22, hue: 215 },
 };
 export const learnFurniture = () => { const l = JSON.parse(JSON.stringify(LEARN)); l.water.level = WATER_UNITS; return l; };
+// Starving: below this need level hunger/thirst start to hurt (reward per second in REWARD.starving).
+export const STARVE = { at: 0.9 };
 export const BOWL_PORTIONS = 3;
 export const WATER_UNITS = 4;
+// The self-refilling home bowl and dish: a slow trickle, so Mochi still has to walk over and eat.
+export const REFILL = { bowl: 1 / 90, water: 1 / 75 };   // portions and units per second
 export const SUN = { from: [330, 200], to: [640, 400], rx: 74, ry: 50, hue: 60 };
 export const TOY_KINDS = {
   ball: { r: 14, drag: 0.9, bounce: 0.8, hue: 0, sat: 1 },
@@ -93,7 +97,8 @@ const clamp01 = v => clamp(v, 0, 1);
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 export class World {
-  constructor({ seed = 1, daySeconds = 360, tod = 0.05, autoCare = true } = {}) {
+  constructor({ seed = 1, daySeconds = 360, tod = 0.05, autoCare = true, refill = false } = {}) {
+    this.refill = refill;
     this.rngState = (seed >>> 0) || 1;
     this.t = 0;
     this.daySeconds = daySeconds;
@@ -358,6 +363,12 @@ export class World {
       this.stockGarden();
     }
 
+    if (this.refill) {                        // the home bowl and dish top themselves up, slowly
+      const f = this.homeFurniture();
+      if (f.bowl) f.bowl.food = Math.min(BOWL_PORTIONS, f.bowl.food + dt * REFILL.bowl);
+      if (f.water) f.water.level = Math.min(WATER_UNITS, f.water.level + dt * REFILL.water);
+    }
+
     // needs rise on their own clocks
     const awake = !m.asleep, slow = awake ? 1 : 0.5, idle = awake ? 1 : 0.15;
     const speedFrac = Math.hypot(m.vx, m.vy) / BODY.speed;
@@ -366,7 +377,7 @@ export class World {
     if (awake) n.fatigue = clamp01(n.fatigue + dt * BODY.fatigue * (1 + 0.6 * speedFrac) * (1 + (BODY.nightFatigue - 1) * (1 - light)));
     n.boredom = clamp01(n.boredom + dt * BODY.boredom * idle);
     n.lonely = clamp01(n.lonely + dt * BODY.lonely * idle);
-    if (n.hunger > 0.9 || n.thirst > 0.9) m.rewardAcc += dt * REWARD.starving;
+    if (n.hunger > STARVE.at || n.thirst > STARVE.at) m.rewardAcc += dt * REWARD.starving;
 
     // the action's effect
     m.actionT += dt;
@@ -643,7 +654,7 @@ export class World {
   snapshot() {
     return JSON.parse(JSON.stringify({
       schema: "mochi-world/1", rngState: this.rngState, t: this.t, daySeconds: this.daySeconds,
-      tod0: this.tod0, day: this.day, autoCare: this.autoCare, furniture: this.furniture, room: this.room, away: this.away, annex: this.annex,
+      tod0: this.tod0, day: this.day, autoCare: this.autoCare, refill: this.refill, furniture: this.furniture, room: this.room, away: this.away, annex: this.annex,
       toys: this.toys, foods: this.foods, sounds: this.sounds, nextId: this.nextId, m: this.m,
     }));
   }
@@ -654,6 +665,7 @@ export class World {
     for (const key of ["rngState", "t", "daySeconds", "tod0", "day", "autoCare", "furniture", "toys", "foods", "sounds", "nextId", "m"]) {
       world[key] = copy[key];
     }
+    world.refill = !!copy.refill;
     if (copy.room && copy.away) { world.room = copy.room; world.away = copy.away; for (const t of world.away.toys) t.inHand = false; }
     // older saves had a copy of home in the garden: give it the garden's own layout (its toys stay)
     if (copy.annex) { world.annex = copy.annex; for (const t of world.annex.toys) t.inHand = false; }   // saves from before the learn room get a fresh one

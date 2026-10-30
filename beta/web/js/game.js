@@ -59,7 +59,7 @@ let laserTimer = 0, laserUntil = 0;
 
 const page = {
   name: "Mochi", tool: "pet", speed: 1, skipNight: true,
-  words: WORDS.map((_, i) => ({ label: ["sit", "spin", "hop", "paw"][i], asked: 0, recent: [], would: null, memory: null })),
+  words: WORDS.map((_, i) => ({ label: ["sit", "spin", "jump", "paw"][i], asked: 0, recent: [], would: null, memory: null })),
   todo: {}, diary: [], decisions: 0, routine: 0, lessons: 0,
 };
 page.name = custom.cfg.name; page.skipNight = custom.cfg.start.skipNight;
@@ -669,6 +669,22 @@ function renderNeeds() {
   $("clock").textContent = `day ${world.day + 1} · ${world.clock()}`;
   if (frames % 60 === 0) { view.coach = coach.line(page.words.map(w => w.label), world.day, world.m.needs, world.room); $("coachLine").textContent = view.coach; }
   $("mood").textContent = mood();
+  needAlert();
+}
+
+// Owner-facing only: a small notice when Mochi gets hungry or thirsty. It never reaches the brain.
+const ALERT_ON = 0.65, ALERT_OFF = 0.5;
+const alertState = { hunger: false, thirst: false };
+function needAlert() {
+  const n = world.m.needs, el = $("needAlert");
+  for (const k of ["hunger", "thirst"]) alertState[k] = alertState[k] ? n[k] > ALERT_OFF : n[k] > ALERT_ON;
+  const { hunger, thirst } = alertState;
+  const text = hunger && thirst ? "Mochi is getting hungry and thirsty" : hunger ? "Mochi is getting hungry" : thirst ? "Mochi is getting thirsty" : "";
+  if (el.dataset.text !== text) {
+    el.dataset.text = text;
+    el.textContent = text ? `${hunger ? "🍚" : "💧"} ${text}${world.room === "home" ? "" : " · carry it home to the bowl"}` : "";
+    el.classList.toggle("show", !!text);
+  }
 }
 
 // ------------------------------------------------------------------ saving
