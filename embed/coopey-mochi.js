@@ -24,7 +24,7 @@
     root.innerHTML='<div class="cgm-p" role="dialog" aria-label="Play with Mochi"><div class="cgm-h"><span>Play with Mochi</span>'+
       '<a href="https://github.com/CadenceGinger/buildamochi" target="_blank" rel="noopener">Powered by Cadence (GPL-3.0) · source</a>'+
       '<button class="cgm-x" type="button" aria-label="Close Mochi">&times;</button></div></div>'+
-      '<button class="cgm-b" type="button" aria-expanded="false" aria-label="Play with Mochi">'+face+'<span>Play with Mochi</span></button>';
+      '<button class="cgm-b" type="button" aria-expanded="false" aria-label="Play with Mochi">'+face+'<span>Mochi</span></button>';
     document.body.appendChild(root);
     var panel=root.querySelector(".cgm-p"),btn=root.querySelector(".cgm-b"),loaded=false;
     function open(v){
@@ -36,7 +36,7 @@
     // One character: the greeter's card gets a "Play with Mochi" button that opens this panel.
     function hook(){var card=document.querySelector("#cg-greeter .cg-links");if(!card){return false}
       if(card.querySelector(".cgm-play"))return true;
-      var a=document.createElement("a");a.href="#";a.className="cgm-play";a.textContent="Play with me";a.style.gridColumn="1 / -1";
+      var a=document.createElement("a");a.href="#";a.className="cgm-play";a.textContent="Mochi";a.style.gridColumn="1 / -1";
       a.onclick=function(e){e.preventDefault();var c=document.querySelector('#cg-greeter .cg-card');if(c&&mq.matches)c.classList.add('cg-hide');open(true)};card.appendChild(a);return true}
     if(!hook()){var n=0,t=setInterval(function(){if(hook()||++n>20)clearInterval(t)},500)}
     // Phones: while the greeter's welcome card is showing it holds the "Play with me" button,
