@@ -9,14 +9,14 @@
   '#cgm .cgm-b{display:flex;align-items:center;gap:8px;background:#0b0b0b;color:#e8c55a;border:1px solid #c9a227;border-radius:999px;padding:6px 14px 6px 6px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.6);font:600 13px system-ui,sans-serif}'+
   '#cgm .cgm-b:hover,#cgm .cgm-b:focus-visible{background:#1a160c}'+
   '#cgm .cgm-b svg{width:34px;height:34px}'+
-  '#cgm .cgm-p{display:none;position:absolute;left:0;bottom:56px;width:360px;height:440px;background:#0b0b0b;border:1px solid #c9a227;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.7)}'+
+  '#cgm .cgm-p{display:none;position:absolute;left:0;bottom:56px;width:280px;height:340px;background:#0b0b0b;border:1px solid #c9a227;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.7)}'+
   '#cgm.open .cgm-p{display:flex;flex-direction:column}'+
   '#cgm .cgm-h{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid #c9a227;color:#e8c55a;font:600 13px system-ui,sans-serif}'+
   '#cgm .cgm-h a{color:#cdbf9a;font-weight:400;font-size:10.5px}'+
   '#cgm .cgm-x{background:none;border:0;color:#c9a227;font-size:20px;cursor:pointer;line-height:1}'+
   '#cgm iframe{flex:1;width:100%;border:0;background:#0b0b0b}'+
   '@media (max-width:600px){#cgm{left:10px;bottom:10px}#cgm .cgm-b span{display:none}#cgm .cgm-b{padding:5px}'+
-  '#cgm .cgm-p{position:fixed;left:8px;right:8px;bottom:64px;width:auto;height:min(72vh,480px)}}';
+  '#cgm .cgm-p{position:fixed;left:8px;right:8px;bottom:64px;width:auto;height:min(55vh,360px)}}';
   var face='<svg viewBox="0 0 80 80" aria-hidden="true"><path d="M14 58c-4-22 8-40 26-40s30 18 26 40c-2 10-50 10-52 0z" fill="#fff8ef" stroke="#c9a227" stroke-width="3"/><circle cx="31" cy="40" r="3.6" fill="#111"/><circle cx="49" cy="40" r="3.6" fill="#111"/><ellipse cx="25" cy="47" rx="4" ry="2.4" fill="#f4b6b6"/><ellipse cx="55" cy="47" rx="4" ry="2.4" fill="#f4b6b6"/><path d="M36 47q4 4 8 0" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
   function init(){
     var st=document.createElement("style");st.textContent=css;document.head.appendChild(st);
