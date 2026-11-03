@@ -137,13 +137,31 @@
       var a=document.createElement("a");a.href="#";a.className="cgm-play";a.textContent="Mochi";a.style.gridColumn="1 / -1";
       a.onclick=function(e){e.preventDefault();var c=document.querySelector('#cg-greeter .cg-card');if(c&&mq.matches)c.classList.add('cg-hide');open(true)};card.appendChild(a);return true}
     if(!hook()){var n=0,t=setInterval(function(){if(hook()||++n>20)clearInterval(t)},500)}
-    // Phones: while the greeter's welcome card is showing it holds the "Play with me" button,
-    // so the bubble steps aside instead of sitting under the card.
-    var mq=window.matchMedia("(max-width:600px)");
+    // One launcher: the old Code Injection greeter's round Mochi button is hidden; ours is the only launcher.
+    // Phones: the greeter's welcome card never auto-opens (not saved as dismissed, so desktop is unchanged).
+    // Anywhere: if the greeter card would cover a primary button it steps aside.
+    var mq=window.matchMedia("(max-width:600px)"),gst=document.createElement("style");
+    gst.textContent='#cg-greeter .cg-mochi{display:none!important}';document.head.appendChild(gst);
+    var PRIM=ADD+',.cart-checkout-button,.cart-checkout,[class*="checkout-button"],a[href*="/checkout"],button[type=submit][class*="checkout"]';
+    function prims(){var out=[].slice.call(document.querySelectorAll(PRIM));
+      [].forEach.call(document.querySelectorAll('button,a,[role=button]'),function(e){if(/^\s*(add to cart|checkout|check out|buy now|place order)\s*$/i.test(e.textContent||""))out.push(e)});
+      [].forEach.call(document.querySelectorAll('body *'),function(e){if(e.closest("#cgm,#cgm-g,#cg-greeter"))return;var cs=getComputedStyle(e);
+        if((cs.position==="fixed"||cs.position==="sticky")&&e.offsetHeight>30&&e.offsetHeight<200){var r=e.getBoundingClientRect();if(r.bottom>=innerHeight-2&&r.width>innerWidth*.6)out.push(e)}});
+      return out.filter(function(e){return !e.closest("#cgm,#cgm-g,#cg-greeter")&&e.getClientRects().length}).map(function(e){return e.getBoundingClientRect()}).filter(function(r){return r.width&&r.bottom>0&&r.top<innerHeight})}
+    function over(a,b,m){m=m||6;return !(a.right+m<b.left||a.left-m>b.right||a.bottom+m<b.top||a.top-m>b.bottom)}
+    var cardAuto=true;
     function dodge(){var c=document.querySelector("#cg-greeter .cg-card");
-      var hide=mq.matches&&c&&!c.classList.contains("cg-hide")&&!root.classList.contains("open");
-      root.style.display=hide?"none":""}
-    dodge();setInterval(dodge,600);
+      if(c&&cardAuto){cardAuto=false;if(mq.matches)c.classList.add("cg-hide")}
+      if(root.classList.contains("open"))return;
+      var P=prims(),bot=mq.matches?10:16;root.style.bottom=bot+"px";
+      var L=btn.getBoundingClientRect(),h=L.height,base=innerHeight-bot,moved=true,n=0;
+      while(moved&&n++<8){moved=false;for(var i=0;i<P.length;i++){var top=base-h;if(!(P[i].right+6<L.left||P[i].left-6>L.right||P[i].bottom+6<top||P[i].top-6>base)){base=P[i].top-8;moved=true}}}
+      bot=Math.min(innerHeight-h-60,Math.max(bot,innerHeight-base));root.style.bottom=bot+"px";
+      if(c&&!c.classList.contains("cg-hide")){var cr=c.getBoundingClientRect();if(P.some(function(r){return over(r,cr)}))c.classList.add("cg-hide")}
+      var gg=document.getElementById("cgm-g");if(gg&&gg.classList.contains("on")){var gr=gg.getBoundingClientRect(),sy=gg.querySelector(".say.on");
+        var hit=P.filter(function(r){return over(r,gr)||(sy&&over(r,sy.getBoundingClientRect()))})[0];
+        if(hit){var m=/translate\(([-\d.]+)px/.exec(gg.style.transform);gg.style.transform="translate("+(m?m[1]:8)+"px,"+Math.max(60,hit.top-56)+"px)"}}}
+    var dgT=0;function dodgeSoon(){clearTimeout(dgT);dgT=setTimeout(dodge,60)}dodge();setInterval(dodge,500);addEventListener("scroll",dodgeSoon,{passive:true});addEventListener("resize",dodgeSoon);
     var H=helper(root,open,function(){return panel.querySelector('iframe')},BASE);
     try{if(sessionStorage.getItem('cgm-keep')==='1')open(true)}catch(e){}
     window.CoopeyMochi={open:function(){open(true)},close:function(){open(false)},go:H.go,cart:H.cart};
