@@ -48,7 +48,7 @@ code { font-size: 12px; word-break: break-all; background: var(--bg2); padding: 
 #layout { flex: 1; width: 100%; max-width: 1600px; margin: 0 auto; padding: var(--gap) 16px; display: grid; gap: var(--gap);
   grid-template-columns: minmax(0, 1fr) var(--side); align-items: start; }
 #play { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
-#stage { position: relative; border-radius: 20px; overflow: hidden; background: #ecd6b4; border: 1px solid var(--line2);
+#stage { position: relative; border-radius: 20px; overflow: hidden; background: #2b2348; border: 1px solid var(--line2);
   box-shadow: 0 20px 60px rgba(0, 0, 0, .45), 0 0 0 1px rgba(153, 69, 255, .15); }
 #room { display: block; width: 100%; height: auto; touch-action: none; cursor: none; }
 #boot { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(13, 10, 26, .72); backdrop-filter: blur(3px); z-index: 3; }
@@ -189,3 +189,54 @@ select { background: var(--bg2); border: 1px solid var(--line2); border-radius: 
   .row .hint { margin-left: 0; }
   #transmitters { grid-template-columns: 1fr; }
 }
+
+/* TEST BUILD: 3D refresh — glassy panels and soft glow */
+#stage { box-shadow: 0 24px 70px rgba(0,0,0,.55), 0 0 0 1px rgba(153,69,255,.25), 0 0 80px rgba(90,143,224,.12); }
+#controls, #side { background: linear-gradient(180deg, rgba(29,23,64,.72), rgba(18,14,36,.72)); backdrop-filter: blur(10px); border: 1px solid rgba(153,69,255,.22); border-radius: 18px; }
+#controls { padding: 10px 12px; }
+button, .btn { transition: transform .12s, box-shadow .2s, border-color .2s; }
+button:hover, .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(153,69,255,.25); border-color: rgba(20,241,149,.5); }
+button.on, .tool.on { box-shadow: inset 0 0 0 1px rgba(20,241,149,.6), 0 0 14px rgba(20,241,149,.25); }
+#top { backdrop-filter: blur(10px); }
+
+/* Bubble command buttons: round, glossy, translucent, matching the 3D Mochi */
+#controls button {
+  position: relative; min-height: 44px; padding: 8px 16px; border-radius: 999px;
+  color: #efeaff; font-weight: 600; letter-spacing: .01em; text-shadow: 0 1px 2px rgba(13,10,26,.6);
+  border: 1px solid rgba(201,255,233,.18);
+  background:
+    radial-gradient(120% 90% at 30% 18%, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 32%, transparent 55%),
+    radial-gradient(140% 120% at 70% 110%, rgba(20,241,149,.20) 0%, transparent 60%),
+    linear-gradient(160deg, rgba(153,69,255,.38), rgba(90,143,224,.26));
+  box-shadow: inset 0 -6px 12px rgba(13,10,26,.35), inset 0 2px 3px rgba(255,255,255,.18), 0 6px 16px rgba(0,0,0,.35);
+  backdrop-filter: blur(6px); transform-origin: 50% 60%;
+  transition: box-shadow .25s, border-color .25s, filter .25s;
+}
+#controls button::after { content: ""; position: absolute; left: 18%; top: 6px; width: 34%; height: 28%; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0)); pointer-events: none; }
+#controls button:hover { transform: none; animation: bubble-wobble .55s ease-out; filter: brightness(1.1);
+  border-color: rgba(20,241,149,.45); box-shadow: inset 0 -6px 12px rgba(13,10,26,.3), inset 0 2px 3px rgba(255,255,255,.22), 0 8px 22px rgba(153,69,255,.35); }
+#controls button:active { animation: bubble-press .28s ease-out; }
+#controls button.on, #controls .tool.on {
+  border-color: rgba(20,241,149,.7);
+  background:
+    radial-gradient(120% 90% at 30% 18%, rgba(255,255,255,.32) 0%, rgba(255,255,255,.08) 32%, transparent 55%),
+    linear-gradient(160deg, rgba(20,241,149,.42), rgba(90,143,224,.34));
+  box-shadow: inset 0 -6px 12px rgba(13,10,26,.3), 0 0 0 2px rgba(20,241,149,.25), 0 0 18px rgba(20,241,149,.35); }
+#controls button.good { background: radial-gradient(120% 90% at 30% 18%, rgba(255,255,255,.28), transparent 55%), linear-gradient(160deg, rgba(20,241,149,.40), rgba(34,140,110,.30)); }
+#controls button.bad { background: radial-gradient(120% 90% at 30% 18%, rgba(255,255,255,.28), transparent 55%), linear-gradient(160deg, rgba(226,85,123,.42), rgba(153,69,255,.28)); }
+#controls button:focus-visible { outline: 2px solid #14F195; outline-offset: 2px; }
+#controls .row { gap: 8px; }
+@keyframes bubble-wobble { 0% { transform: scale(1,1); } 30% { transform: scale(1.07,.94); } 55% { transform: scale(.97,1.04); } 80% { transform: scale(1.02,.99); } 100% { transform: scale(1,1); } }
+@keyframes bubble-press { 0% { transform: scale(1); } 40% { transform: scale(.92,.88); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { #controls button:hover, #controls button:active { animation: none; } }
+@media (max-width: 599px) { #controls button { min-height: 44px; min-width: 44px; padding: 8px 13px; font-size: 14px; } #controls .row { gap: 7px; } }
+#controls .word { border-radius: 999px; min-height: 44px; border: 1px solid rgba(201,255,233,.18); overflow: hidden;
+  background: radial-gradient(120% 90% at 20% 15%, rgba(255,255,255,.2), transparent 50%), linear-gradient(160deg, rgba(153,69,255,.3), rgba(90,143,224,.2));
+  box-shadow: inset 0 -5px 10px rgba(13,10,26,.3), 0 6px 16px rgba(0,0,0,.3); }
+#controls .word button { background: transparent; box-shadow: none; border: none; border-radius: 999px 0 0 999px; padding: 8px 6px 8px 14px; }
+#controls .word button::after { display: none; }
+#controls .word input { color: #efeaff; min-height: 40px; }
+#controls .word.ringing { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(226,85,123,.35), 0 0 18px rgba(226,85,123,.35); }
+#controls button.held { border-color: #c9b8ff; box-shadow: 0 0 0 3px rgba(169,153,255,.35), 0 0 20px rgba(169,153,255,.4); transform: scale(.95,.92); }
+#controls #shows { display: inline-flex; flex-wrap: wrap; gap: 8px; }
