@@ -1,4 +1,4 @@
-/*! Coopey Mochi widget loader v2.1 (shop helper, TEST BUILD) · unofficial community fork of Mochi (MIT, Bernhard Mueller)
+/*! Coopey Mochi widget loader v2.1 (shop helper + collector glossary, TEST BUILD) · unofficial community fork of Mochi (MIT, Bernhard Mueller)
  *  running a Cadence brain (GPL-3.0-only). Source: https://github.com/CadenceGinger/buildamochi
  *  This loader is ~4 KB and fetches nothing else until the visitor opens the bubble.
  *  No cookies and no tracking. Mochi is saved only in the visitor's own browser. */
@@ -103,6 +103,86 @@
     new MutationObserver(function(){on=root.classList.contains("open");if(!on){g.classList.remove("on")}else{var b=root.querySelector(".cgm-b").getBoundingClientRect();g.style.transform="translate("+(b.left+300)+"px,"+(innerHeight-90)+"px)";g.classList.add("on");if(!(ctx&&ctx.classList.contains("on")))talk("Hover anything and I'll point. Or ask me where to go!",3500)}}).observe(root,{attributes:true,attributeFilter:["class"]});
     var pd=document.querySelector(".product-detail");if(pd){var PL=label(pd);show(PL);setTimeout(function(){var t=pd.querySelector(".product-title")||pd;hopTo(t);talk("Ooh, "+PL,3500)},900)}
     try{if(sessionStorage.getItem('cgm-open')){sessionStorage.removeItem('cgm-open');openPanel(true)}}catch(e){}
+    // 4) Collector glossary (TEST BUILD). A plain rule decides when Mochi chimes in, not the Cadence brain:
+    // the brain links words to actions and rewards; it does not learn definitions. Rule: at most one automatic
+    // tip per page view (desktop only, never at 600px or narrower), any number when the shopper taps an underlined term.
+    // The brain only gets an ordinary "look" event at the term, same as a hover.
+    var GL=[ // [pattern, explanation]  longest/most specific first
+      [/\bPSA\s*10\b/i,"PSA 10 means Gem Mint, the top grade from PSA!"],
+      [/\bPSA\s*9\b/i,"PSA 9 is Mint, one step below PSA's top grade (Gem Mint 10)."],
+      [/\bPSA\s*8\b/i,"PSA 8 is Near Mint-Mint on PSA's 1–10 scale."],
+      [/\bPSA\b/,"PSA (Professional Sports Authenticator) grades cards 1–10 and seals them in a slab."],
+      [/\b(CGC\s*Pristine\s*10|Pristine\s*10\s*CGC|Pristine\s*10)\b/i,"CGC Pristine 10 is CGC's very highest grade, a step above Gem Mint 10!"],
+      [/\bCGC\s*10\b/i,"CGC 10 is Gem Mint from CGC; only Pristine 10 ranks higher."],
+      [/\bCGC\b/,"CGC grades cards on a 1–10 scale (half points too) and seals them in a slab."],
+      [/\bBlack\s*Label\b/i,"A BGS Black Label is a 10 with perfect 10s in all four subgrades. Super rare!"],
+      [/\b(BGS|Beckett)\b/,"BGS (Beckett Grading Services) gives subgrades for centering, corners, edges and surface."],
+      [/\b(slab|slabbed)\b/i,"A slab is the sealed, tamper-evident plastic case a graded card lives in."],
+      [/\bpop(ulation)?\s*report\b/i,"The pop report counts how many copies a grader has given each grade."],
+      [/\bReverse\s*Holo\b/i,"Reverse Holo means the shiny foil is on the card everywhere except the artwork."],
+      [/\bSpecial\s*Illustration\s*Rare\b|\bSIR\b/,"Special Illustration Rares are full-card art showpieces, among the rarest in Scarlet & Violet sets."],
+      [/\bIllustration\s*Rare\b/i,"Illustration Rares show a Pokémon in full-card artwork that extends past the frame."],
+      [/\bArt\s*Rare\b/i,"Art Rare (AR) is the Japanese name for an Illustration Rare: full-card artwork."],
+      [/\b(Alt(ernate)?\s*Art)\b/i,"Alt Art cards are special versions with unique full-scene artwork, loved by collectors."],
+      [/\bFull\s*Art\b/i,"Full Art means the artwork covers the whole card, not just a window."],
+      [/\bSecret\s*Rare\b/i,"A Secret Rare's number is higher than the set's printed total, like 201/198."],
+      [/\bUltra\s*Rare\b/i,"Ultra Rare is a rarity tier above Holo Rare, home to big cards like V, ex and Full Arts."],
+      [/\bTrainer\s*Gallery\b|\bTG\d+(\/TG\d+)?\b/i,"Trainer Gallery (TG) cards show a Pokémon with its Trainer, from Sword & Shield era sets."],
+      [/\bBlack\s*Star\s*Promo\b/i,"Black Star Promos are official promo cards marked with a black star, given out outside of packs."],
+      [/\bPromo\b/i,"A promo card comes from a special product or event instead of regular booster packs."],
+      [/\bHolo(foil|graphic)?\b/i,"Holo means the artwork has shiny holographic foil."],
+      [/\b1st\s*Edition\b/i,"1st Edition cards are from the first print run of early sets, marked with a 1st Edition stamp."],
+      [/\bShadowless\b/i,"Shadowless is an early Base Set print without the drop shadow beside the art box."],
+      [/\bVMAX\b/,"VMAX cards evolve from a Pokémon V and give up three Prize cards when knocked out."],
+      [/\bVSTAR\b/,"VSTAR cards evolve from a Pokémon V and have a once-per-game VSTAR Power."],
+      [/\bGX\b/,"GX cards (Sun & Moon era) have a powerful once-per-game GX attack."],
+      [/\b(NM|Near\s*Mint)\b/,"Near Mint (NM) means a raw card that looks almost untouched, at most tiny flaws."],
+      [/\bLP:?\s*(1\/[\d,]+|[\d,]+)/,function(m){var n=m[1].replace(/^1\//,"");return "On a Pop, LP: "+n+" means Limited Production, a stated run of "+n+" pieces."}],
+      [/\b(LP|Lightly\s*Played)\b(?!:?\s*\d)/,"Lightly Played (LP) means a raw card with light wear, like minor edge whitening."],
+      [/\bRaw\b/,"Raw means the card is ungraded, not in a slab."],
+      [/\bChase\b/i,"A Chase is a rarer variant of a Pop, often packed about 1 in 6 with the regular one."],
+      [/\bVaulted\b/i,"Vaulted means Funko has retired that Pop, so no new ones are being made."],
+      [/\b(SDCC|NYCC|Convention\s*Exclusive|(summer|fall|winter)\s*convention)\b/i,"Convention Pops were sold at a Funko convention event, usually in limited numbers."],
+      [/\bExclusive\b/i,"An Exclusive is sold only by one store or event, often marked with a sticker on the box."],
+      [/\bFlocked\b/i,"Flocked Pops have a soft, fuzzy coating."],
+      [/\b(GITD|Glow\s*in\s*the\s*Dark)\b/i,"GITD means Glow in the Dark!"],
+      [/\bPop\s*Protector\b/i,"A Pop protector is a clear plastic case that keeps the box safe from dings."],
+      [/\b(OOB|Out\s*of\s*Box)\b/i,"OOB means out of box: the figure without its original packaging."],
+      [/\b(NIB|MIB|New\s*in\s*Box|Mint\s*in\s*Box)\b/i,"NIB means new in box: never opened, still in its original packaging."],
+      [/\bSealed\b/i,"Sealed means factory sealed and never opened."],
+      [/\bGrail\b/i,"A grail is a collector's dream item, the top of the wishlist!"],
+      [/\bBundle\b/i,"A bundle is several items sold together as one listing."]];
+    function tip(i,m){var t=GL[i][1];return typeof t==="function"?t(m):t}
+    var glcss=document.createElement("style");glcss.textContent='.cgm-term{text-decoration:underline dotted #c9a227 2px;text-underline-offset:3px;cursor:help;border-radius:3px}.cgm-term:focus-visible{outline:2px solid #c9a227}'+
+      '#cgm-gl{position:fixed;z-index:99999;max-width:min(280px,calc(100vw - 16px));background:#0b0b0b;color:#f3e6c4;border:1px solid #c9a227;border-radius:12px;padding:8px 30px 8px 10px;font:13px/1.35 system-ui,sans-serif;box-shadow:0 8px 22px rgba(0,0,0,.6);display:none}'+
+      '#cgm-gl.on{display:block}#cgm-gl b{color:#e8c55a}#cgm-gl button{position:absolute;top:2px;right:6px;background:none;border:0;color:#c9a227;font-size:18px;cursor:pointer}';document.head.appendChild(glcss);
+    var bub=document.createElement("div");bub.id="cgm-gl";bub.setAttribute("role","status");bub.setAttribute("aria-live","polite");document.body.appendChild(bub);var bubT=0;
+    function prim(){return [].slice.call(document.querySelectorAll(ADD+',.cart-checkout-button,[class*="checkout-button"],a[href*="/checkout"]')).filter(function(e){return e.getClientRects().length&&!e.closest("#cgm")}).map(function(e){return e.getBoundingClientRect()})}
+    function clash(a){return prim().some(function(b){return !(a.right+6<b.left||a.left-6>b.right||a.bottom+6<b.top||a.top-6>b.bottom)})}
+    function explain(el,auto){var r=el.getBoundingClientRect();if(r.bottom<0||r.top>innerHeight)return false;
+      bub.innerHTML='<b>'+'💡 '+'</b>'+el.dataset.tip.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'<button type="button" aria-label="Close tip">&times;</button>';bub.classList.add("on");
+      bub.querySelector("button").onclick=function(){bub.classList.remove("on")};
+      var w=bub.offsetWidth,h=bub.offsetHeight,x=Math.max(8,Math.min(innerWidth-w-8,r.left)),spots=[r.bottom+8,r.top-h-8],ok=false;
+      for(var k=0;k<2&&!ok;k++){var y=spots[k];if(y<8||y+h>innerHeight-8)continue;bub.style.left=x+"px";bub.style.top=y+"px";ok=!clash(bub.getBoundingClientRect())}
+      if(!ok){bub.classList.remove("on");return false} // never cover Add to cart / Checkout
+      post({op:"look",x:28+(r.left+r.width/2)/innerWidth*904,y:28+(r.top+r.height/2)/innerHeight*544});
+      clearTimeout(bubT);bubT=setTimeout(function(){bub.classList.remove("on")},auto?6000:9000);return true}
+    function mark(node){var seen={};var tw=document.createTreeWalker(node,NodeFilter.SHOW_TEXT,{acceptNode:function(n){return n.parentNode.closest("a,button,script,style,.cgm-term,#cgm,#cgm-g,#cgm-gl,input,select,textarea")?2:1}}),list=[],n;
+      while(n=tw.nextNode())list.push(n);var out=[];
+      list.forEach(function(tn){var go=true;while(go){go=false;var txt=tn.nodeValue,best=null;
+        for(var i=0;i<GL.length;i++){if(seen[i])continue;var m=GL[i][0].exec(txt);if(m&&(!best||m.index<best.m.index||(m.index===best.m.index&&m[0].length>best.m[0].length)))best={i:i,m:m}}
+        if(!best)break;var mm=best.m,s=document.createElement("span");s.className="cgm-term";s.tabIndex=0;s.setAttribute("role","button");s.dataset.tip=tip(best.i,mm);
+        s.setAttribute("aria-label",mm[0]+": tap for meaning");seen[best.i]=1;
+        // a match also covers shorter entries for the same idea (PSA 10 covers PSA)
+        for(var j=best.i+1;j<GL.length;j++){var m2=GL[j][0].exec(mm[0]);if(m2&&m2[0].length>0)seen[j]=1}
+        var rest=tn.splitText(mm.index);var after=rest.splitText(mm[0].length);s.textContent=rest.nodeValue;rest.parentNode.replaceChild(s,rest);out.push(s);tn=after;go=true}});return out}
+    var scope=document.querySelectorAll('.product-detail .product-title,.ProductItem-details-title,.product-detail .product-description,.ProductItem-details-excerpt,.product-detail h1,[data-mochi-desc]');
+    var terms=[];[].forEach.call(scope,function(e){terms=terms.concat(mark(e))});
+    document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest(".cgm-term");if(t){e.preventDefault();explain(t,false)}},true);
+    document.addEventListener("keydown",function(e){var t=e.target.closest&&e.target.closest(".cgm-term");if(t&&(e.key==="Enter"||e.key===" ")){e.preventDefault();explain(t,false)}},true);
+    var phone=matchMedia("(max-width:600px)");
+    if(terms.length&&!phone.matches)setTimeout(function(){for(var i=0;i<terms.length;i++)if(explain(terms[i],true))break},4500); // one auto tip per page view
+    window.__cgmGlossary={count:GL.length,terms:terms.map(function(t){return t.textContent})};
     return {go:go,cart:cart}}
   function init(){
     var st=document.createElement("style");st.textContent=css;document.head.appendChild(st);
@@ -166,5 +246,15 @@
     try{if(sessionStorage.getItem('cgm-keep')==='1')open(true)}catch(e){}
     window.CoopeyMochi={open:function(){open(true)},close:function(){open(false)},go:H.go,cart:H.cart};
   }
+  // Fail-safe for the old Code Injection greeter, installed before init so it works even if init is late or throws:
+  // capture-phase click fix for its stale /shop?category= links, and the old avatar hidden whenever it (re)appears.
+  (function(){var MAP={"funko+pops":"/shop/funko-pops","funko%20pops":"/shop/funko-pops","pokemon+cards":"/shop/singles","pok%C3%A9mon+cards":"/shop/singles","graded+cards":"/shop/graded"};
+    function real(h){var m=/\/shop\?category=([^&#]+)/i.exec(h||"");return m?(MAP[m[1].toLowerCase()]||"/shop"):null}
+    document.addEventListener("click",function(e){var a=e.target&&e.target.closest&&e.target.closest("a[href]");if(!a)return;var r=real(a.getAttribute("href"));
+      if(r&&!e.defaultPrevented&&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&e.button===0){e.preventDefault();e.stopPropagation();location.href=r}},true);
+    function tidy(){var g=document.getElementById("cg-greeter");if(!g)return;var m=g.querySelector(".cg-mochi");if(m&&m.style.display!=="none")m.style.setProperty("display","none","important");
+      [].forEach.call(g.querySelectorAll('a[href*="/shop?category="]'),function(a){a.setAttribute("href",real(a.getAttribute("href")))})}
+    tidy();try{new MutationObserver(tidy).observe(document.documentElement,{childList:true,subtree:true})}catch(e){}
+    document.addEventListener("DOMContentLoaded",tidy)})();
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
 })();
