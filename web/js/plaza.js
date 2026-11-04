@@ -5,8 +5,8 @@
 // visitors"), visitors in the same room reach the brain as capped motion only (see senses.js);
 // that setting and its marker hue live on this side and are never sent or accepted from peers.
 import { joinRoom, selfId } from "./vendor/trystero-nostr-0.26.0.mjs";
-import { COAT, drawMochi, drawLaser } from "./render.js?v=9";
-import { clean } from "./custom.js?v=4";
+import { COAT, drawMochi, drawLaser } from "./render.js?v=11";
+import { clean } from "./custom.js?v=5";
 
 export const ROOM_ID = "buildamochi-plaza";
 const APP_ID = "buildamochi.com/plaza/v1";
@@ -125,7 +125,9 @@ export class Plaza {
   // Draws every visitor into the room; call after drawRoom.
   draw(ctx, view, room = "home", ringHue = null) {
     const now = performance.now();
-    for (const peer of this.peers.values()) {
+    const label = globalThis.__mochiTop || ctx;      // names and emotes sit above the 3D layer
+    this.list3d = [];
+    for (const [id, peer] of this.peers) {
       const s = peer.state; if (!s) continue;
       if (s.room !== room) { peer.shown.x = s.x; peer.shown.y = s.y; continue; }   // only visitors in the same room
       peer.shown.x += (s.x - peer.shown.x) * 0.25; peer.shown.y += (s.y - peer.shown.y) * 0.25;
@@ -135,6 +137,8 @@ export class Plaza {
       ctx.save(); ctx.globalAlpha = 0.92;
       withCoat(s.coat, () => drawMochi(ctx, { m, hand: { present: false } }, { ...view, emotes: [], look: [Math.cos(s.heading), Math.sin(s.heading)], alert: 0, blink: false }));
       ctx.restore();
+      if (globalThis.__mochi3d) this.list3d.push({ id, m, coat: s.coat, look: [Math.cos(s.heading), Math.sin(s.heading)] });
+      { const ctx = label;
       ctx.save(); ctx.font = "bold 13px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.lineWidth = 3; ctx.strokeStyle = "rgba(13,10,26,.7)"; ctx.fillStyle = "#fff";
       ctx.strokeText(s.name, m.x, m.y - 50); ctx.fillText(s.name, m.x, m.y - 50);   // canvas text: no HTML
@@ -143,7 +147,7 @@ export class Plaza {
         if (age > 1) peer.emote = null;
         else { ctx.globalAlpha = 1 - age * age; ctx.font = "22px system-ui"; ctx.fillText(peer.emote.text, m.x, m.y - 72 - age * 30); }
       }
-      ctx.restore();
+      ctx.restore(); }
     }
   }
 }

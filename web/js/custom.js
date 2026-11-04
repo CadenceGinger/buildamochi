@@ -7,7 +7,7 @@
 // Furniture/toy/food hues are NOT customisable: the brain sees them and learned them.
 // Config sources, first wins: ?mochi=<base64url JSON> in the URL, localStorage "mochi-custom",
 // the site's mochi.config.json, built-in defaults.
-import { COAT } from "./render.js?v=9";
+import { COAT } from "./render.js?v=11";
 import { BODY } from "./world.js?v=9";
 
 export const STORAGE_KEY = "mochi-custom";

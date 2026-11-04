@@ -33,18 +33,18 @@ export function drawRoom(ctx, world, view) {
 
   if (world.room === "garden") { drawGarden(ctx, world, view); return; }
   // floor and planks
-  ctx.fillStyle = "#ecd6b4"; ctx.fillRect(0, 0, w, h);
-  ctx.strokeStyle = "rgba(160,120,80,0.16)"; ctx.lineWidth = 1;
+  ctx.fillStyle = "#2b2348"; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(153,69,255,0.14)"; ctx.lineWidth = 1;
   for (let y = wall; y < h - wall; y += 46) { ctx.beginPath(); ctx.moveTo(wall, y); ctx.lineTo(w - wall, y); ctx.stroke(); }
   for (let y = wall, row = 0; y < h - wall; y += 46, row++) {
     for (let x = wall + (row % 2 ? 90 : 30); x < w - wall; x += 180) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 46); ctx.stroke(); }
   }
   // rug
-  roundRect(ctx, 300, 215, 360, 210, 34); ctx.fillStyle = "#f3b8a6"; ctx.fill();
-  roundRect(ctx, 316, 231, 328, 178, 26); ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 3; ctx.stroke();
+  roundRect(ctx, 300, 215, 360, 210, 34); ctx.fillStyle = "#3d2f6e"; ctx.fill();
+  roundRect(ctx, 316, 231, 328, 178, 26); ctx.strokeStyle = "rgba(20,241,149,0.35)"; ctx.lineWidth = 3; ctx.stroke();
 
   // walls and the window
-  ctx.fillStyle = "#c79f77";
+  ctx.fillStyle = "#17122c";
   ctx.fillRect(0, 0, w, wall); ctx.fillRect(0, h - wall, w, wall); ctx.fillRect(0, 0, wall, h); ctx.fillRect(w - wall, 0, wall, h);
   ctx.fillStyle = "rgba(90,60,40,0.18)"; ctx.fillRect(wall, wall, w - 2 * wall, 5); ctx.fillRect(wall, wall, 5, h - 2 * wall);
   // the doorway to the garden
@@ -89,6 +89,9 @@ function drawRest(ctx, world, view) {
   }
 
   drawMochi(ctx, world, view);
+  // with the 3D layer on, everything from here up goes on the top canvas, above the 3D Mochi
+  const top = globalThis.__mochiTop;
+  if (top) { top.setTransform(1, 0, 0, 1, 0, 0); top.clearRect(0, 0, w, h); ctx = top; }
   for (const toy of world.toys) if (toy.kind === "wand") (toy.laser ? drawLaser(ctx, toy, now) : drawWand(ctx, toy, world.hand));
   drawHand(ctx, world, view);
 
@@ -287,7 +290,8 @@ export function drawMochi(ctx, world, view) {
   const line = COAT.line, ear = COAT.ear;
 
   // shadow
-  ellipse(ctx, m.x, m.y + r * 0.72 * LOOK, r * LOOK * (0.95 - lift / 120), r * 0.3 * LOOK * (1 - lift / 90), "rgba(70,45,30,0.2)");
+  ellipse(ctx, m.x, m.y + r * 0.72 * LOOK, r * LOOK * (0.95 - lift / 120), r * 0.3 * LOOK * (1 - lift / 90), "rgba(0,0,0,0.32)");
+  if (globalThis.__mochi3d) { drawZs(ctx, m, t); return; }       // the 3D layer draws the body
 
   ctx.save();
   ctx.translate(x, y);
@@ -360,7 +364,9 @@ export function drawMochi(ctx, world, view) {
   else if (m.taste.bad > 0.3) { ctx.moveTo(-1, fy + 11); ctx.quadraticCurveTo(3, fy + 7, 7, fy + 11); ctx.stroke(); }
   else { ctx.moveTo(-1, fy + 8); ctx.quadraticCurveTo(1, fy + 11, 3, fy + 8); ctx.quadraticCurveTo(5, fy + 11, 7, fy + 8); ctx.stroke(); }
   ctx.restore();
-
+  drawZs(ctx, m, t);
+}
+function drawZs(ctx, m, t) {
   if (m.asleep) {
     ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     for (let i = 0; i < 3; i++) {

@@ -3,12 +3,12 @@
 // until the answer arrives, and the world waits at the next decision if the brain is still
 // settling, so no outcome is ever credited to a decision that was not executed.
 
-import { custom, customReady, applyCustom } from "./custom.js?v=4";
+import { custom, customReady, applyCustom } from "./custom.js?v=5";
 import { World, DT, TICK_STEPS, ROOM, BODY } from "./world.js?v=9";
 import { sense } from "./senses.js?v=10";
 import { Arousal } from "./arousal.js";
 import { A, ACTIONS, HEARING, OFFSETS, SOUNDS, SPEC, TRICKS, WORDS } from "./spec.js";
-import { drawRoom } from "./render.js?v=9";
+import { drawRoom } from "./render.js?v=11";
 import { BrainLink, brainIndex } from "./brainlink.js";
 import { BrainView, actionName } from "./brainview.js";
 import { Sound } from "./audio.js";
@@ -16,6 +16,12 @@ import { saveLife, loadLife, forgetLife, lifeToBlob, blobToLife, savePlazaBackup
 
 const $ = id => document.getElementById(id);
 const canvas = $("room"), ctx = canvas.getContext("2d");
+// TEST BUILD: 3D Mochi layer over the room canvas (?flat=1 keeps the 2D drawing).
+let mochi3d = null;
+if (!new URLSearchParams(location.search).has("flat")) {
+  import("./mochi3d.js?v=1").then(mod => { mochi3d = mod.init($("stage"), canvas); globalThis.__mochi3d = !!mochi3d; globalThis.__mochiTop = mochi3d ? mochi3d.topCtx : null; })
+    .catch(error => console.info("3D Mochi unavailable", error));
+}
 const VERSION = "mochi-page/2";               // of the saved room and page state; the brain is versioned by its pack
 const YOUTH_TICKS = 0;                       // a hatchling from the packaged brain is already weaned
 
@@ -668,6 +674,10 @@ function frame(now) {
   view.look = [(target.x - m.x) / d, (target.y - m.y) / d];
   drawRoom(ctx, world, view);
   if (plaza) { try { plaza.draw(ctx, view, world.room, visitorPrefs.on ? visitorPrefs.hue : null); } catch (error) { console.warn("plaza draw", error); } }
+  if (mochi3d) {
+    try { mochi3d.frame(world, view, (plaza && plaza.list3d) || []); }
+    catch (error) { console.warn("3D Mochi off, back to 2D", error); mochi3d.canvas.remove(); mochi3d.top.remove(); mochi3d = null; globalThis.__mochi3d = false; globalThis.__mochiTop = null; }
+  }
   if (frames++ % 12 === 0) renderNeeds();
   brainView.frame(now);
   requestAnimationFrame(frame);
@@ -731,7 +741,7 @@ async function togglePlaza(force) {
   if (plaza && plaza.room && force !== true) { await leavePlaza(); return; }
   try {
     if (ready) { await savePlazaBackup(await snapshot()); plazaVisit = true; }
-    if (!plaza) { const { Plaza } = await import("./plaza.js?v=10"); plaza = new Plaza({ getState: plazaState, onChange: plazaUi }); }
+    if (!plaza) { const { Plaza } = await import("./plaza.js?v=12"); plaza = new Plaza({ getState: plazaState, onChange: plazaUi }); }
     plaza.join(); toast(`${page.name} walked into the plaza. Other Mochis appear as they connect.`);
   } catch (error) { console.warn("plaza unavailable", error); toast("The plaza could not connect from this browser."); }
 }
