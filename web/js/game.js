@@ -11,6 +11,7 @@ import { A, ACTIONS, HEARING, OFFSETS, SOUNDS, SPEC, TRICKS, WORDS } from "./spe
 import { drawRoom } from "./render.js?v=11";
 import { BrainLink, brainIndex } from "./brainlink.js";
 import { BrainView, actionName } from "./brainview.js";
+import { BrainScreen } from "./brainscreen.js?v=1";   // TEST BUILD: the Brain view screen (read-only)
 import { Sound } from "./audio.js";
 import { saveLife, loadLife, forgetLife, lifeToBlob, blobToLife, savePlazaBackup, loadPlazaBackup } from "./storage.js?v=2";
 
@@ -28,6 +29,7 @@ const YOUTH_TICKS = 0;                       // a hatchling from the packaged br
 const view = { time: 0, emotes: [], look: [0, 0], alert: 0, blink: false, showSenses: false, rearrange: false, hideHand: false };
 const sound = new Sound();
 const brainView = new BrainView();
+const brainScreen = new BrainScreen({ page: () => page });
 const observation = new Float32Array(SPEC.inputs);
 
 applyCustom(custom.cfg);
@@ -170,6 +172,7 @@ async function boot() {
     try { const response = await fetch(brain.asset(manifest.atlas)); if (response.ok) atlas = await response.json(); } catch (error) { atlas = null; }
     if (!atlas || atlas.neurons !== report.report.neurons) atlas = await brain.call({ op: "atlas" });
     brainView.setAtlas(atlas);
+    brainScreen.setAtlas(atlas);
     $("about").textContent =
       `Brain pack ${manifest.name} (${manifest.id}), raised on Cadence ${manifest.cadence}: ` +
       `${report.report.neurons.toLocaleString()} neurons and ${report.report.synapses.toLocaleString()} synapses ` +
@@ -203,11 +206,15 @@ async function decide() {
   // state of the others.
   const every = latency > 120 ? 6 : latency > 80 ? 3 : latency > 50 ? 2 : 1;
   const record = brainView.open && (ticks % every === 0 || (every < 6 && (wake || showing !== null)));
+  // The Brain view screen only adds read-only readouts (settling steps, activity, memory read);
+  // none of them changes what the brain decides or learns.
+  const screen = brainScreen.active;
+  const screenFrames = screen && !record ? brainScreen.wantFrames(ticks, wake, showing !== null, latency) : 0;
   const sent = round(observation);
   const message = {
     op: "tick", obs: [sent], reward: [outcome.reward],
     salience: [Math.abs(outcome.reward) + outcome.emphasis], aroused: wake,
-    want: { policy: true, learning: true, frames: record ? brainView.framesWanted : 0, activity: brainView.open && !record },
+    want: { policy: true, learning: true, frames: record ? brainView.framesWanted : screenFrames, activity: (brainView.open && !record) || screen, recall: screen },
   };
   if (showing !== null) {
     // A shown move is a lesson for this very moment. While a sound rings, the lesson's other
@@ -247,6 +254,8 @@ async function decide() {
     `${page.lessons} lessons · ${latency.toFixed(0)} ms per decision`;
   view.alert += 0.3 * (Math.min(1, arousal.level) - view.alert);
   brainView.push(answer, { asleep: m.asleep, arousal: arousal.level, threshold: arousal.genes.threshold, fatigue: m.needs.fatigue });
+  brainScreen.push({ obs: sent, outcome, answer, wake, showing, tick: ticks, latency, words: page.words.map(word => word.label),
+    body: { asleep: m.asleep, arousal: arousal.level, threshold: arousal.genes.threshold, fatigue: m.needs.fatigue } });
 
   // a night's sleep: once Mochi has slept a while, the stores consolidate
   asleepTicks = m.asleep ? asleepTicks + 1 : 0;
@@ -255,6 +264,7 @@ async function decide() {
     sleptThisNight = true;
     brain.call({ op: "sleep" }).then(result => {
       const held = Object.values(result.held || {}).reduce((sum, value) => sum + value, 0);
+      brainScreen.note("sleep", result.held);
       if (held > 0.05) { diary("slept on what today brought", "consolidated", 0); brainView.pulse("memory"); if (page.lessons) done("slept"); }
       dirty = true;
     });
@@ -295,6 +305,7 @@ async function probe() {
       brain.call({ op: "recall", obs: [round(heard)] }),
     ]);
     const word = page.words[index], result = answer.answers[0];
+    brainScreen.probe(index, result);
     if (result.qualified) {
       const tricks = result.policy.map((p, i) => [p, i]).filter(([, i]) => i >= A.sit || i === A.call);
       tricks.sort((a, b) => b[0] - a[0]);
@@ -352,6 +363,7 @@ function buildControls() {
   $("addMouse").onclick = () => { const toy = world.spawnToy("mouse", 200 + Math.random() * 560, 150 + Math.random() * 300); world.windMouse(toy.id); };
   $("sound").onclick = () => { sound.enable(!sound.on); $("sound").textContent = sound.on ? "🔊" : "🔈"; };
   $("brainToggle").onclick = toggleBrain; $("brainClose").onclick = toggleBrain;
+  for (const button of document.querySelectorAll("[data-screen]")) button.onclick = () => brainScreen.toggle(button.dataset.screen === "brain");
   $("brainStyle").onclick = () => brainView.toggleStyle();
   $("brainWide").onclick = () => { $("brain").classList.toggle("wide"); if (brainView.scan) setTimeout(() => brainView.scan.fit(), 60); };
   $("save").onclick = () => save(true);
@@ -380,6 +392,8 @@ function buildControls() {
   $("name").oninput = event => { page.name = event.target.value || "Mochi"; setTitle(); };
   document.body.classList.add("brain-open");
   if (new URLSearchParams(location.search).get("brain") === "0") toggleBrain();
+  // TEST BUILD: ?screen=brain opens the Brain view screen (after the side tabs have settled)
+  if (new URLSearchParams(location.search).get("screen") === "brain") setTimeout(() => brainScreen.toggle(true), 700);
   window.addEventListener("keydown", event => {
     if (event.target instanceof HTMLInputElement) return;
     const key = event.key.toLowerCase();
@@ -389,6 +403,7 @@ function buildControls() {
     else if (key === "w") $("whistle").click();
     else if (key === "c") $("clap").click();
     else if (key === "b") toggleBrain();
+    else if (key === "v") brainScreen.toggle();
     else if (key === " ") { event.preventDefault(); document.querySelector(`#speed button[data-speed="${paused ? page.speed : 0}"]`).click(); }
   });
   renderWords();
@@ -680,6 +695,7 @@ function frame(now) {
   }
   if (frames++ % 12 === 0) renderNeeds();
   brainView.frame(now);
+  brainScreen.frame(now);
   requestAnimationFrame(frame);
 }
 
@@ -771,7 +787,7 @@ setupPlaza();
 
 document.addEventListener("visibilitychange", () => { if (document.hidden && ticks > 20) save(false); });
 window.addEventListener("pagehide", () => { if (plaza) plaza.leave(); if (ticks > 20) save(false); });
-window.mochi = { get plaza() { return plaza; }, get world() { return world; }, get page() { return page; }, get arousal() { return arousal; }, get ticks() { return ticks; }, get latency() { return latency; }, brainView, version: VERSION, BODY, ACTIONS };
+window.mochi = { get plaza() { return plaza; }, get world() { return world; }, get page() { return page; }, get arousal() { return arousal; }, get ticks() { return ticks; }, get latency() { return latency; }, brainView, brainScreen, version: VERSION, BODY, ACTIONS };
 
 boot();
 requestAnimationFrame(frame);
