@@ -9,6 +9,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3CradialGradient id='g' cx='.3' cy='.75' r='1'%3E%3Cstop offset='0' stop-color='%239945FF'/%3E%3Cstop offset='.5' stop-color='%235A8FE0'/%3E%3Cstop offset='1' stop-color='%2314F195'/%3E%3C/radialGradient%3E%3Ccircle cx='32' cy='34' r='24' fill='url(%23g)' stroke='%230d0a1a' stroke-width='3'/%3E%3Ccircle cx='24' cy='32' r='3.4' fill='%230b0714'/%3E%3Ccircle cx='40' cy='32' r='3.4' fill='%230b0714'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css?v=8">
 <link rel="stylesheet" href="brainscreen.css?v=1">
+<link rel="stylesheet" href="speech.css?v=4">
 <script>window.mochiCount=function(p,t){try{if(window.goatcounter&&window.goatcounter.count)window.goatcounter.count({path:"event/"+p,title:t||p,event:true});}catch(e){}};</script>
 <script data-goatcounter="https://buildamochi.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -67,10 +68,23 @@
         <button id="good" class="good" title="Good Mochi! (G)">👍 Good!</button>
         <button id="no" class="bad" title="No! (N)">👎 No!</button>
       </div>
+      <div id="micError" class="micerror" role="alert" hidden></div>
       <div class="row">
         <span class="label">Show</span>
         <span id="shows"></span>
+        <button id="listenBtn" title="Opt-in microphone. Off until you press it. Saying a lesson word rings the same ear cells as the 1–4 buttons.">🎤 Listen</button>
+        <span id="listenStatus" class="hint speech-status">mic off</span>
+        <span id="micMeter" class="micmeter" hidden title="Mic level. The tick marks the level that counts as speech."><i></i><b></b></span>
         <span class="hint">Say a word, hold a move while it rings, then say Good!</span>
+      </div>
+      <div id="speechPanel">
+        <p><b>Voice (beta).</b> Press <b>Listen</b> to turn the mic on; it stays off until you do. When Mochi's listener hears one of the four lesson words, it rings Mochi's ear cells exactly the way the 1–4 buttons do, so you can teach by speaking. Mochi's own brain and learning are unchanged. You can also calibrate your voice, or feed a WAV or a sample with no mic.</p>
+        <div class="row">
+          <button id="speechCalibrate" type="button" title="Say each lesson word three times">Calibrate my voice</button>
+          <label class="filebutton">Feed a WAV<input id="speechWav" type="file" accept="audio/*,.wav"></label>
+          <select id="speechSample" aria-label="Try a recorded sample"></select>
+        </div>
+        <div id="speechCalHint" class="hint"></div>
       </div>
     </section>
     </div>
@@ -147,6 +161,6 @@
 
 <script>document.getElementById("copy-ca").onclick=function(){navigator.clipboard.writeText(document.getElementById("ca").textContent).then(()=>{this.textContent="Copied"},()=>{this.textContent="Select & copy"})};</script>
 <script src="js/layout.js?v=3" defer></script>
-<script type="module" src="js/game.js?v=12"></script>
+<script type="module" src="js/game.js?v=13"></script>
 </body>
 </html>
