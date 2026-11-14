@@ -12,6 +12,7 @@ import { drawRoom } from "./render.js?v=11";
 import { BrainLink, brainIndex } from "./brainlink.js";
 import { BrainView, actionName } from "./brainview.js";
 import { BrainScreen } from "./brainscreen.js?v=1";   // TEST BUILD: the Brain view screen (read-only)
+import { attachSpeech } from "./speech.js?v=3";         // opt-in Cadence 0.98 speech sidecar
 import { Sound } from "./audio.js";
 import { saveLife, loadLife, forgetLife, lifeToBlob, blobToLife, savePlazaBackup, loadPlazaBackup } from "./storage.js?v=2";
 
@@ -186,6 +187,9 @@ async function boot() {
     }));
     ready = true;
     $("boot").classList.add("done");
+    // speech sidecar is opt-in and does not touch Mochi's brain until a word is heard,
+    // at which point it calls the same sayWord() path as the 1–4 buttons.
+    attachSpeech({ sayWord, getLabels: () => page.words.map(w => w.label) });
   } catch (error) {
     console.error(error);
     bootStatus(`the brain did not start: ${error.message}`, 1);
@@ -787,7 +791,7 @@ setupPlaza();
 
 document.addEventListener("visibilitychange", () => { if (document.hidden && ticks > 20) save(false); });
 window.addEventListener("pagehide", () => { if (plaza) plaza.leave(); if (ticks > 20) save(false); });
-window.mochi = { get plaza() { return plaza; }, get world() { return world; }, get page() { return page; }, get arousal() { return arousal; }, get ticks() { return ticks; }, get latency() { return latency; }, brainView, brainScreen, version: VERSION, BODY, ACTIONS };
+window.mochi = { get plaza() { return plaza; }, get world() { return world; }, get page() { return page; }, get arousal() { return arousal; }, get ticks() { return ticks; }, get latency() { return latency; }, get speech() { return window.mochiSpeech; }, brainView, brainScreen, version: VERSION, BODY, ACTIONS, sayWord };
 
 boot();
 requestAnimationFrame(frame);
