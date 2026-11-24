@@ -5,7 +5,8 @@
 //
 // Cadence 0.103.0's optional WebAssembly kernel is on by default. A page may pass
 // message.wasm = false (or open with ?wasm=0) to keep the NumPy loop. If the kernel
-// file is missing or fails to load, Cadence falls back to the NumPy loop and the page still runs.
+// file is missing or fails to load, or the pack's Cadence is older than 0.103.0,
+// the NumPy loop stays in use and the page still boots.
 
 let pyodide = null;
 let handle = null;
@@ -61,7 +62,10 @@ async function start(packUrl, wantWasm) {
   status(`loading Cadence ${manifest.cadence}`);
   const wheel = await (await fetch(new URL(manifest.wheel, packUrl))).arrayBuffer();
   pyodide.unpackArchive(new Uint8Array(wheel), "wheel");
-  wasmInfo = await loadWasm(wantWasm);
+  // The optional kernel first appears in Cadence 0.103.0. Older wheels have no cadence._wasm.
+  const parts = String(manifest.cadence || "").split(".").map(n => parseInt(n, 10) || 0);
+  const canKernel = (parts[0] || 0) > 0 || (parts[1] || 0) >= 103;
+  wasmInfo = await loadWasm(wantWasm && canKernel);
   status("loading the brain's own code");
   pyodide.FS.mkdirTree("/home/pyodide/mochi");
   for (const name of manifest.sources) {
@@ -69,6 +73,15 @@ async function start(packUrl, wantWasm) {
     if (!response.ok) throw new Error(`the pack lacks py/${name}`);
     pyodide.FS.writeFile("/home/pyodide/mochi/" + name, await response.text());
   }
+  // Import Host first so a kernel probe failure cannot block boot. Skip the
+  // cadence._wasm import entirely on older packs; catch any Exception on 0.103.0+.
+  const probe = canKernel ? `
+try:
+    from cadence import _wasm
+    _loaded = bool(_wasm.available())
+except Exception:
+    pass
+` : "";
   const loaded = pyodide.runPython(`
 import sys, warnings, json
 warnings.simplefilter("ignore")
@@ -76,8 +89,8 @@ if "/home/pyodide" not in sys.path:
     sys.path.insert(0, "/home/pyodide")
 from mochi.host import Host
 _host = Host()
-from cadence import _wasm
-json.dumps(bool(_wasm.available()))
+_loaded = False
+${probe}json.dumps(_loaded)
 `);
   handle = pyodide.globals.get("_host").handle_json;
   try {
@@ -85,7 +98,7 @@ json.dumps(bool(_wasm.available()))
   } catch (_) {
     wasmInfo.loaded = false;
   }
-  if (wantWasm && !wasmInfo.loaded && !wasmInfo.error) {
+  if (wantWasm && canKernel && !wasmInfo.loaded && !wasmInfo.error) {
     wasmInfo.error = "the kernel file was present but Cadence did not switch to it (NumPy loop is in use)";
   }
   return manifest;
