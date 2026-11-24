@@ -141,7 +141,8 @@ async function boot() {
     if (saved && !known(saved.pack)) { toast(`The brain pack ${saved.pack} of the saved life is not installed here.`); saved = null; }
     const packId = saved ? saved.pack : (wanted && known(wanted) ? wanted : index.default);
     brain = new BrainLink(stage => bootStatus(stage, STAGES[stage] ?? 0.6));
-    const manifest = await brain.start(packId, index.packs.find(pack => pack.id === packId).url);
+    const wantWasm = new URLSearchParams(location.search).get("wasm") !== "0";
+    const manifest = await brain.start(packId, index.packs.find(pack => pack.id === packId).url, { wasm: wantWasm });
     if (!same(manifest.spec, SPEC)) throw new Error(`the pack ${packId} was raised for another body (its senses or actions differ from this page)`);
     page.pack = packId;
     let report = null;
@@ -791,7 +792,7 @@ setupPlaza();
 
 document.addEventListener("visibilitychange", () => { if (document.hidden && ticks > 20) save(false); });
 window.addEventListener("pagehide", () => { if (plaza) plaza.leave(); if (ticks > 20) save(false); });
-window.mochi = { get plaza() { return plaza; }, get world() { return world; }, get page() { return page; }, get arousal() { return arousal; }, get ticks() { return ticks; }, get latency() { return latency; }, get speech() { return window.mochiSpeech; }, brainView, brainScreen, version: VERSION, BODY, ACTIONS, sayWord };
+window.mochi = { get plaza() { return plaza; }, get world() { return world; }, get page() { return page; }, get arousal() { return arousal; }, get ticks() { return ticks; }, get latency() { return latency; }, get speech() { return window.mochiSpeech; }, get wasm() { return brain && brain.wasm; }, brainView, brainScreen, version: VERSION, BODY, ACTIONS, sayWord };
 
 boot();
 requestAnimationFrame(frame);

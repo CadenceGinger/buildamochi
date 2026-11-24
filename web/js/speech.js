@@ -1,7 +1,7 @@
 // Opt-in sidecar listener for Mochi's four lesson words.
 // Off until the player presses Listen. Recognised words call the same sayWord()
 // path as the 1–4 buttons, so the ear cells light up in the brain view.
-// Mochi's own Cadence 0.91.2 brain and learning are not touched.
+// Mochi's own Cadence brain and learning are not touched.
 
 import { RATE, logMel, resample, matchTemplates, makeVad, decodeWav, normalizeFrames, StreamResampler } from "./speech_front.js";
 

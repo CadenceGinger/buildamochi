@@ -52,11 +52,13 @@ export class BrainLink {
       this.worker.postMessage({ id, message }, transfer);
     });
   }
-  async start(packId, url = null) {
+  async start(packId, url = null, opts = {}) {
     this.packUrl = new URL(url || packId + "/", BRAINS);
-    const { manifest } = await this.call({ op: "start", pack: this.packUrl.href });
-    this.manifest = manifest;
-    return manifest;
+    const wantWasm = opts.wasm !== false;
+    const result = await this.call({ op: "start", pack: this.packUrl.href, wasm: wantWasm });
+    this.manifest = result.manifest;
+    this.wasm = result.wasm || null;
+    return result.manifest;
   }
   asset(name) { return new URL(name, this.packUrl); }
   stop() { this.worker.terminate(); }
