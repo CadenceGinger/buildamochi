@@ -318,7 +318,7 @@ class Life:
         config = brain.learner.config
         out = []
         for row in np.atleast_2d(np.asarray(observations, dtype=float)):
-            phases = brain.imagine([row[None, :]], budget=config.free_steps, tolerance=config.tolerance)
+            phases = brain.imagine([row[None, :]], budget=config.free_steps)
             phase = phases[-1]
             if not bool(np.all(phase.qualified)):
                 out.append({"qualified": False, "policy": [], "action": -1})

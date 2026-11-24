@@ -97,7 +97,7 @@ class Genes:
 
 def _configs(genes: Genes):
     """The composition's own learning and reward settings with Mochi's genes applied."""
-    base = Brain.compose(4, 2, modules=(4,), seed=0)
+    base = Brain.compose(4, 2, modules=(4,), seed=0, recall=False, backend="cpu")
     learning = replace(
         base.learner.config,
         eta=genes.teach_eta, eta_bias=genes.teach_eta / 10.0, momentum=genes.teach_momentum,
@@ -249,7 +249,7 @@ def build(spec: dict[str, Any], genes: Genes | None = None, seed: int = 0) -> Br
             inputs, actions,
             modules=(genes.first, genes.association) if genes.first else (genes.association,),
             observers=(genes.observer,) if genes.observer else (),
-            lateral=genes.lateral, seed=seed, **({"recall": True} if genes.recall else {}), **options,
+            lateral=genes.lateral, seed=seed, recall=bool(genes.recall), backend="cpu", **options,
         )
     elif genes.layout == "modality":
         brain = Brain(develop(_modality_genome(spec, genes), seed=seed), seed=seed, **options)
