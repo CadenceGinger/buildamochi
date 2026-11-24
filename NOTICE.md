@@ -10,10 +10,11 @@ by Bernhard Mueller. Not an official Bernhard Mueller or Pragma Research release
   released under the **GNU GPL v3.0** (see `COPYING`). Mochi-original files remain available under MIT as well.
 - **Source:** https://github.com/CadenceGinger/buildamochi
 
-## Our modifications (community fork, last updated 2026-10-28)
+## Our modifications (community fork, last updated 2026-11-24)
 - `index.html` (root redirect), `.nojekyll`, `CNAME`
 - `web/index.html` (info panel, footer), plaza/visitors code in `web/js/` and `plaza/`
 - Garden redesign and water dish (world/render code in `web/js/`)
 - `beta/` learn-room beta (Motherboard coach, words sit/spin/jump)
 - `build/`, `docs/BUILD_YOUR_OWN.md`, README "Community-hosted copy" section
 - Licence notices: `COPYING`, `NOTICE.md`, page footers
+- Cadence 0.103.0 brain packs (`web/brains/mochi-0.103.0-a`, `mochi-0.103.0-recall`) and the optional WebAssembly kernel file `web/cadence_kernel.wasm` (Cadence 0.103.0 release asset, GPL-3.0)

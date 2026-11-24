@@ -1,8 +1,18 @@
 # Status
 
-## Current version (2026-10-30)
+## Current version (2026-11-24)
 
-The site now runs on `cadence-net` 0.91.2. The default brain pack is `mochi-0.91.2-a`; `mochi-0.91.2-recall` is
+The site now runs on `cadence-net` 0.103.0. The default brain pack is `mochi-0.103.0-a`; `mochi-0.103.0-recall` is
+also available, and the older 0.91.2, 0.89.0 and 0.74.0 packs remain for existing saves. On the same seeds,
+0.103.0 chooses the same actions as 0.91.2 (saved brains differ only in last bits, about 1e-14). The page opts
+in to Cadence's optional WebAssembly kernel (`web/cadence_kernel.wasm`, a 0.103.0 release asset). In a real
+Chrome worker that made a teaching step about 2.7× faster (64 ms down to 24 ms) and a calm think step about
+3× faster (13 ms down to 4 ms), with a fallback to the NumPy loop if the kernel file is missing. The 0.103.0
+wheel in the packs is the unmodified PyPI wheel. Mochi still adapts only by online learning.
+
+## Previous version (2026-10-30)
+
+The site ran on `cadence-net` 0.91.2. The default brain pack was `mochi-0.91.2-a`; `mochi-0.91.2-recall` was
 also available, and the older 0.89.0 and 0.74.0 packs remain for existing saves. On the same seeds, 0.91.2 gives
 results identical to 0.91.1 (and 0.91.1 to 0.89.0) in every simulation, save and reload continue exactly, and
 memory stays flat over 30,000 ticks. The 0.91.2 wheel in the packs is built from the PyPI sdist. Mochi still

@@ -1,2 +1,2 @@
-cadence-net==0.91.2
+cadence-net==0.103.0
 numpy>=2.0
